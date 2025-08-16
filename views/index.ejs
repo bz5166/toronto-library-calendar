@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toronto Library Events Calendar</title>
+    
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-bg: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: #333;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), #004d99);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+        
+        .main-container {
+            margin-top: 2rem;
+            padding: 0 1rem;
+        }
+        
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        
+        .filter-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        }
+        
+        /* View Toggle */
+        .view-toggle {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        
+        .view-toggle .btn-group .btn {
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        
+        .view-toggle .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        /* Calendar Navigation */
+        .calendar-nav {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .calendar-nav h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .nav-buttons .btn {
+            margin: 0 0.25rem;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        
+        /* Map Filter Controls */
+        .map-filter-controls {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .map-filter-controls label {
+            font-weight: 500;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        .map-filter-controls .form-control {
+            width: 200px;
+        }
+        
+        .map-filter-controls .btn {
+            white-space: nowrap;
+        }
+        
+        /* Current location button */
+        .location-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+
+        .location-btn {
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            padding: 5px;
+            cursor: pointer;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .location-btn:hover {
+            background: #f4f4f4;
+        }
+
+        .location-btn.loading {
+            color: #0066cc;
+        }
+        
+        /* Calendar Grid Styles with Event Tiles */
+        .calendar-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--border-color);
+        }
+        
+        .calendar-day-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .calendar-day {
+            background: #fff;
+            height: 120px;
+            padding: 0.4rem;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .calendar-day:hover {
+            background: #f0f8ff;
+            box-shadow: inset 0 0 0 2px var(--primary-color);
+        }
+        
+        .calendar-day.other-month {
+            background: #f8f9fa;
+            color: #999;
+        }
+        
+        .calendar-day.other-month:hover {
+            background: #f0f0f0;
+        }
+        
+        .calendar-day.today {
+            background: #e3f2fd;
+            border: 2px solid var(--primary-color);
+            box-sizing: border-box;
+        }
+        
+        .day-number {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+            color: #333;
+            flex-shrink: 0;
+        }
+        
+        .other-month .day-number {
+            color: #999;
+        }
+        
+        /* Event tiles in calendar */
+        .events-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        
+        .event-tile {
+            background: var(--primary-color);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.2;
+            display: block;
+        }
+        
+        .event-tile:hover {
+            background: #004d99;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .more-events {
+            background: #666;
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .more-events:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+        
+        /* Day Events Modal */
+        .day-events-modal .modal-dialog {
+            max-width: 900px;
+        }
+        
+        .day-events-modal .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .day-events-modal .modal-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .day-event-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .day-event-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .day-event-card .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .library-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .library-link:hover {
+            color: #004d99;
+            text-decoration: underline;
+        }
+        
+        /* Event Details Modal */
+        .modal-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .event-detail-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .event-detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .event-detail-label {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.25rem;
+        }
+        
+        /* Map Styles */
+        .map-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+        
+        .library-popup {
+            max-width: 250px;
+        }
+        
+        .library-popup h3 {
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .popup-event {
+            padding: 0.5rem;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .popup-event:hover {
+            background: #f8f9fa;
+        }
+        
+        .event-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* Loading and Status */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .status-bar {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+        
+        .status-item {
+            display: inline-block;
+            margin-right: 2rem;
+            color: #666;
+        }
+        
+        .status-item strong {
+            color: var(--primary-color);
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .calendar-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .calendar-day {
+                height: 90px;
+                padding: 0.2rem;
+            }
+            
+            .day-number {
+                font-size: 0.8rem;
+                margin-bottom: 0.2rem;
+            }
+            
+            .event-tile {
+                font-size: 0.55rem;
+                padding: 0.05rem 0.2rem;
+            }
+            
+            .more-events {
+                font-size: 0.5rem;
+                padding: 0.05rem 0.2rem;
+            }
+            
+            .main-container {
+                padding: 0 0.5rem;
+            }
+            
+            #map {
+                height: 300px;
+            }
+            
+            .day-events-modal .modal-dialog {
+                max-width: 95%;
+                margin: 1rem auto;
+            }
+            
+            .map-filter-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .map-filter-controls .form-control {
+                width: 100%;
+            }
+        }
+        
+        /* Utility Classes */
+        .text-muted { color: #6c757d !important; }
+        .text-primary { color: var(--primary-color) !important; }
+        .text-success { color: var(--secondary-color) !important; }
+        .text-danger { color: var(--danger-color) !important; }
+        .text-warning { color: var(--warning-color) !important; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-calendar-alt me-2"></i>
+                Toronto Library Events
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text" id="eventCount">
+                    <i class="fas fa-clock me-1"></i>
+                    Loading events...
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid main-container">
+        <!-- Status Bar -->
+        <div class="status-bar" id="statusBar" style="display: none;">
+            <div class="status-item">
+                <i class="fas fa-calendar me-1"></i>
+                <strong id="totalEvents">0</strong> total events
+            </div>
+            <div class="status-item">
+                <i class="fas fa-filter me-1"></i>
+                <strong id="filteredEvents">0</strong> showing
+            </div>
+            <div class="status-item">
+                <i class="fas fa-map-marker-alt me-1"></i>
+                <strong id="libraryCount">0</strong> libraries
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+            <div class="filter-title">
+                <i class="fas fa-filter"></i>
+                Filters
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Search Events</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search events...">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Library</label>
+                    <select class="form-select" id="libraryFilter">
+                        <option value="">All Libraries</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Age Group</label>
+                    <select class="form-select" id="ageGroupFilter">
+                        <option value="">All Ages</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-outline-secondary w-100" id="clearFilters">
+                        <i class="fas fa-times me-1"></i>
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <div class="btn-group" role="group" id="viewToggle">
+                <input type="radio" class="btn-check" name="view" id="calendarView" value="calendar" checked>
+                <label class="btn btn-outline-primary" for="calendarView">
+                    <i class="fas fa-calendar me-1"></i>
+                    Calendar
+                </label>
+                <input type="radio" class="btn-check" name="view" id="mapView" value="map">
+                <label class="btn btn-outline-primary" for="mapView">
+                    <i class="fas fa-map me-1"></i>
+                    Map
+                </label>
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div id="calendarContainer">
+            <!-- Calendar Navigation -->
+            <div class="calendar-nav">
+                <div class="nav-buttons">
+                    <button class="btn btn-outline-primary" id="prevMonth">
+                        <i class="fas fa-chevron-left"></i>
+                        Previous
+                    </button>
+                    <button class="btn btn-primary" id="todayBtn">
+                        <i class="fas fa-calendar-day"></i>
+                        Today
+                    </button>
+                </div>
+                <h2 id="currentMonth">January 2024</h2>
+                <div class="nav-buttons">
+                    <button class="btn btn-outline-primary" id="nextMonth">
+                        Next
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar -->
+            <div class="calendar-container">
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Map View -->
+        <div id="mapContainer" style="display: none;">
+            <!-- Map Date Filter -->
+            <div class="map-filter-controls">
+                <label for="dateFilter">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Filter by Date:
+                </label>
+                <input type="date" id="dateFilter" class="form-control">
+                <button id="clearDateFilter" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>
+                    Clear Filter
+                </button>
+            </div>
+            
+            <div class="map-container">
+                <h3 class="mb-3">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    Library Locations
+                </h3>
+                <div id="map">
+                    <!-- Current location button -->
+                    <div class="location-controls">
+                        <button id="locationBtn" class="location-btn" title="Find my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Events Modal -->
+    <div class="modal fade day-events-modal" id="dayEventsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dayEventsModalTitle">Events for Selected Day</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="dayEventsModalBody">
+                    <!-- Day events will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div class="modal fade" id="eventModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Event Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="eventModalBody">
+                    <!-- Event details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Global Variables
+        let allEvents = [];
+        let filteredEvents = [];
+        let currentDate = new Date();
+        let map = null;
+        let libraryMarkers = [];
+        let libraryCoordinates = {};
+        let markersLayer; // Layer group for markers
+        let currentLocationMarker = null; // Current location marker
+
+        // Custom pin icon for libraries
+        const pinIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#dc2626" width="30" height="30">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+            `),
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+
+        // Custom icon for current location
+        const currentLocationIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4285f4" width="24" height="24">
+                    <circle cx="12" cy="12" r="8" fill="#4285f4" stroke="#fff" stroke-width="3"/>
+                    <circle cx="12" cy="12" r="3" fill="#fff"/>
+                </svg>
+            `),
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded, starting initialization...');
+            setupEventListeners();
+            loadFilterOptions();
+            loadLibraryCoordinates();
+            loadEvents();
+        });
+
+        // Generate event page URL from website field in event data
+        function getEventPageUrl(event) {
+            // Use the website field from the event API data
+            if (event.website && event.website.trim()) {
+                return event.website.trim();
+            }
+            
+            // Fallback - if no website, return # to indicate no link
+            return '#';
+        }
+
+        // Check if event has a valid URL
+        function hasValidEventUrl(event) {
+            return event.website && event.website.trim() && event.website.trim() !== '#';
+        }
+
+        // Load library coordinates from API
+        async function loadLibraryCoordinates() {
+            try {
+                console.log('📍 Loading library coordinates...');
+                const response = await fetch('/api/events/locations');
+                const data = await response.json();
+                
+                if (data.success) {
+                    libraryCoordinates = data.locations;
+                    console.log(`✅ Loaded ${Object.keys(libraryCoordinates).length} library locations`);
+                } else {
+                    console.warn('⚠️ Could not load library coordinates, using fallback data');
+                    libraryCoordinates = {
+                        'Toronto Reference Library': { lat: 43.6532, lng: -79.3832 },
+                        'North York Central Library': { lat: 43.7615, lng: -79.4111 },
+                        'Scarborough Civic Centre Branch': { lat: 43.7735, lng: -79.2584 }
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading library coordinates:', error);
+                libraryCoordinates = {
+                    'Toronto Reference Library': { lat: 43.6532, lng: -79.3832 },
+                    'North York Central Library': { lat: 43.7615, lng: -79.4111 },
+                    'Scarborough Civic Centre Branch': { lat: 43.7735, lng: -79.2584 }
+                };
+            }
+        }
+
+        // Find and mark current location
+        function findCurrentLocation() {
+            const locationBtn = document.getElementById('locationBtn');
+            
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by this browser.');
+                return;
+            }
+            
+            // Show loading state
+            locationBtn.classList.add('loading');
+            locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            locationBtn.title = 'Finding location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    console.log(`📍 Current location: ${lat}, ${lng} (accuracy: ${accuracy}m)`);
+                    
+                    // Remove existing current location marker
+                    if (currentLocationMarker) {
+                        map.removeLayer(currentLocationMarker);
+                        if (currentLocationMarker.accuracyCircle) {
+                            map.removeLayer(currentLocationMarker.accuracyCircle);
+                        }
+                    }
+                    
+                    // Add current location marker
+                    currentLocationMarker = L.marker([lat, lng], { 
+                        icon: currentLocationIcon,
+                        zIndexOffset: 1000 // Ensure it appears above other markers
+                    });
+                    
+                    currentLocationMarker.bindPopup(`
+                        <div style="text-align: center;">
+                            <strong>📍 Your Location</strong><br>
+                            <small>Accuracy: ~${Math.round(accuracy)}m</small><br>
+                            <button onclick="findNearestLibraries(${lat}, ${lng})" class="btn btn-sm btn-primary mt-2">
+                                Find Nearest Libraries
+                            </button>
+                        </div>
+                    `).openPopup();
+                    
+                    currentLocationMarker.addTo(map);
+                    
+                    // Center map on current location
+                    map.setView([lat, lng], 14);
+                    
+                    // Reset button state
+                    locationBtn.classList.remove('loading');
+                    locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+                    locationBtn.title = 'Find my location';
+                    
+                    // Add accuracy circle
+                    const accuracyCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        fillColor: '#4285f4',
+                        fillOpacity: 0.1,
+                        color: '#4285f4',
+                        weight: 1
+                    }).addTo(map);
+                    
+                    // Store reference to remove later if needed
+                    currentLocationMarker.accuracyCircle = accuracyCircle;
+                },
+                function(error) {
+                    console.error('❌ Location error:', error);
+                    let errorMessage = 'Could not get your location. ';
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Please allow location access and try again.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMessage += 'An unknown error occurred.';
+                    }
+                    
+                    alert(errorMessage);
+                    
+                    // Reset button state
+                    locationBtn.classList.remove('loading');
+                    locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+                    locationBtn.title = 'Find my location';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                }
+            );
+        }
+
+        // Find nearest libraries to current location
+        function findNearestLibraries(userLat, userLng) {
+            const librariesWithDistance = [];
+            
+            // Calculate distance to each library
+            Object.entries(libraryCoordinates).forEach(([name, coords]) => {
+                const distance = calculateDistance(userLat, userLng, coords.lat, coords.lng);
+                librariesWithDistance.push({
+                    name: name,
+                    distance: distance,
+                    coords: coords
+                });
+            });
+            
+            // Sort by distance and get top 5
+            const nearestLibraries = librariesWithDistance
+                .sort((a, b) => a.distance - b.distance)
+                .slice(0, 5);
+            
+            console.log('📍 Nearest libraries:', nearestLibraries);
+            
+            // Create popup content with nearest libraries
+            let popupContent = '<div><strong>📚 Nearest Libraries:</strong><br>';
+            nearestLibraries.forEach((lib, index) => {
+                popupContent += `
+                    <div style="margin: 5px 0; padding: 3px; border-bottom: 1px solid #eee;">
+                        ${index + 1}. <strong>${lib.name}</strong><br>
+                        <small>📍 ${lib.distance.toFixed(1)} km away</small>
+                    </div>
+                `;
+            });
+            popupContent += '</div>';
+            
+            // Update current location popup
+            if (currentLocationMarker) {
+                currentLocationMarker.bindPopup(popupContent).openPopup();
+            }
+        }
+
+        // Calculate distance between two coordinates (Haversine formula)
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Calendar navigation
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+            document.getElementById('todayBtn').addEventListener('click', () => {
+                currentDate = new Date();
+                renderCalendar();
+            });
+
+            // Filter listeners
+            document.getElementById('searchInput').addEventListener('input', debounce(filterEvents, 300));
+            document.getElementById('libraryFilter').addEventListener('change', filterEvents);
+            document.getElementById('categoryFilter').addEventListener('change', filterEvents);
+            document.getElementById('ageGroupFilter').addEventListener('change', filterEvents);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+            // Date filter for map - Simple, no debounce
+            document.getElementById('dateFilter').addEventListener('change', filterEvents);
+
+            // Clear date filter button
+            document.getElementById('clearDateFilter').addEventListener('click', function() {
+                document.getElementById('dateFilter').value = '';
+                filterEvents();
+            });
+
+            // Current location button
+            document.getElementById('locationBtn').addEventListener('click', findCurrentLocation);
+
+            // View toggle
+            document.querySelectorAll('input[name="view"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    if (this.value === 'calendar') {
+                        showCalendarView();
+                    } else if (this.value === 'map') {
+                        showMapView();
+                    }
+                });
+            });
+        }
+
+        // Filter events - Updated to work with date filter
+        function filterEvents() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const library = document.getElementById('libraryFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+            const ageGroup = document.getElementById('ageGroupFilter').value;
+            const selectedDate = document.getElementById('dateFilter').value;
+
+            filteredEvents = allEvents.filter(event => {
+                // Search filter
+                const matchesSearch = !search ||
+                    event.title.toLowerCase().includes(search) ||
+                    (event.description && event.description.toLowerCase().includes(search)) ||
+                    (event.library && event.library.toLowerCase().includes(search));
+                    
+                // Library filter
+                const matchesLibrary = !library || event.library === library;
+                
+                // Category filter
+                const matchesCategory = !category || event.category === category;
+                
+                // Age group filter
+                const matchesAgeGroup = !ageGroup || event.ageGroup === ageGroup;
+                
+                // Date filter
+                const matchesDate = !selectedDate || (() => {
+                    if (!event.startDate) return false;
+                    const eventDate = new Date(event.startDate).toISOString().split('T')[0];
+                    return eventDate === selectedDate;
+                })();
+
+                return matchesSearch && matchesLibrary && matchesCategory && matchesAgeGroup && matchesDate;
+            });
+
+            updateEventCount();
+            updateStatusBar();
+            renderCalendar();
+            updateMapMarkers();
+        }
+
+        // Load events from API
+        async function loadEvents() {
+            try {
+                document.getElementById('eventCount').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Loading events...';
+                
+                const response = await fetch('/api/events');
+                const data = await response.json();
+                
+                if (data.success) {
+                    allEvents = data.events;
+                    filteredEvents = [...allEvents];
+                    
+                    console.log(`✅ Loaded ${allEvents.length} events`);
+                    
+                    updateEventCount();
+                    updateStatusBar();
+                    loadFilterOptions();
+                    renderCalendar();
+                    
+                    document.getElementById('statusBar').style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Failed to load events');
+                }
+            } catch (error) {
+                console.error('❌ Error loading events:', error);
+                document.getElementById('eventCount').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Error loading events';
+            }
+        }
+
+        // Load filter options
+        function loadFilterOptions() {
+            if (allEvents.length === 0) return;
+
+            const libraries = [...new Set(allEvents.map(event => event.library).filter(Boolean))].sort();
+            const categories = [...new Set(allEvents.map(event => event.category).filter(Boolean))].sort();
+            const ageGroups = [...new Set(allEvents.map(event => event.ageGroup).filter(Boolean))].sort();
+
+            populateSelect('libraryFilter', libraries);
+            populateSelect('categoryFilter', categories);
+            populateSelect('ageGroupFilter', ageGroups);
+        }
+
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            const currentValue = select.value;
+            
+            select.innerHTML = select.options[0].outerHTML;
+            
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                select.appendChild(optionElement);
+            });
+            
+            select.value = currentValue;
+        }
+
+        // Clear all filters - Updated to include date filter
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('libraryFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('ageGroupFilter').value = '';
+            document.getElementById('dateFilter').value = ''; // Clear date filter too
+            filterEvents();
+        }
+
+        // Update event count
+        function updateEventCount() {
+            const total = allEvents.length;
+            const showing = filteredEvents.length;
+            document.getElementById('eventCount').innerHTML = `
+                <i class="fas fa-calendar-check me-1"></i>
+                ${showing} of ${total} events
+            `;
+        }
+
+        // Update status bar
+        function updateStatusBar() {
+            const libraries = [...new Set(filteredEvents.map(event => event.library).filter(Boolean))];
+            
+            document.getElementById('totalEvents').textContent = allEvents.length;
+            document.getElementById('filteredEvents').textContent = filteredEvents.length;
+            document.getElementById('libraryCount').textContent = libraries.length;
+        }
+
+        // View switching functions
+        function showCalendarView() {
+            document.getElementById('calendarContainer').style.display = 'block';
+            document.getElementById('mapContainer').style.display = 'none';
+            renderCalendar();
+        }
+
+        function showMapView() {
+            document.getElementById('calendarContainer').style.display = 'none';
+            document.getElementById('mapContainer').style.display = 'block';
+            if (!map) {
+                initializeMap();
+            }
+            updateMapMarkers();
+        }
+
+        // Initialize map
+        function initializeMap() {
+            console.log('🗺️ Initializing map...');
+            
+            map = L.map('map').setView([43.6532, -79.3832], 11);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Create layer group for markers
+            markersLayer = L.layerGroup().addTo(map);
+            
+            console.log('✅ Map initialized');
+        }
+
+        // Update map markers
+        function updateMapMarkers() {
+            if (!map || !markersLayer) return;
+            
+            markersLayer.clearLayers(); // Clear existing markers
+            
+            const eventsData = getFilteredEvents();
+            
+            const eventsByLibrary = {};
+            eventsData.forEach(event => {
+                if (!event.library) return;
+                
+                if (!eventsByLibrary[event.library]) {
+                    eventsByLibrary[event.library] = [];
+                }
+                eventsByLibrary[event.library].push(event);
+            });
+            
+            Object.keys(eventsByLibrary).forEach(libraryName => {
+                const events = eventsByLibrary[libraryName];
+                
+                let coordinates = null;
+                
+                const searchNames = [
+                    libraryName,
+                    libraryName.toLowerCase(),
+                    libraryName.replace(/library/i, '').trim(),
+                    libraryName.replace(/branch/i, '').trim()
+                ];
+                
+                for (const searchName of searchNames) {
+                    if (libraryCoordinates[searchName]) {
+                        coordinates = [
+                            libraryCoordinates[searchName].lat,
+                            libraryCoordinates[searchName].lng
+                        ];
+                        break;
+                    }
+                }
+                
+                if (!coordinates) {
+                    console.warn(`⚠️ No coordinates found for library: ${libraryName}`);
+                    return;
+                }
+                
+                // Create pin marker
+                const marker = L.marker(coordinates, { icon: pinIcon });
+                
+                const locationData = Object.values(libraryCoordinates).find(loc =>
+                    loc.lat === coordinates[0] && loc.lng === coordinates[1]
+                );
+                
+                let popupContent = `
+                    <div class="library-popup">
+                        <h3>${libraryName}</h3>
+                        <p><strong>${events.length} events</strong></p>
+                        ${locationData?.address ? `<p>📍 ${locationData.address}</p>` : ''}
+                        ${locationData?.phone ? `<p>📞 ${locationData.phone}</p>` : ''}
+                        <div class="event-list">
+                `;
+                
+                events.slice(0, 5).forEach(event => {
+                    const eventUrl = getEventPageUrl(event);
+                    const hasUrl = hasValidEventUrl(event);
+                    
+                    popupContent += `
+                        <div class="popup-event">
+                            ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link" onclick="event.stopPropagation()">` : ''}
+                            <strong>${event.title}</strong>
+                            ${hasUrl ? '</a>' : ''}
+                            <br>
+                            <small>${event.startDate ? formatDate(event.startDate) : 'Date TBD'}</small>
+                            <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
+                        </div>
+                    `;
+                });
+                
+                if (events.length > 5) {
+                    popupContent += `<div class="popup-event">...and ${events.length - 5} more events</div>`;
+                }
+                
+                popupContent += '</div></div>';
+                
+                marker.bindPopup(popupContent);
+                markersLayer.addLayer(marker);
+            });
+        }
+
+        // Calendar rendering with event titles
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonth').textContent =
+                currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            // Add calendar days
+            const currentDateStr = new Date().toDateString();
+            
+            for (let i = 0; i < 42; i++) {
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                if (cellDate.getMonth() !== month) {
+                    dayElement.classList.add('other-month');
+                }
+                
+                if (cellDate.toDateString() === currentDateStr) {
+                    dayElement.classList.add('today');
+                }
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = cellDate.getDate();
+                dayElement.appendChild(dayNumber);
+                
+                // Add event titles
+                const dayEvents = getEventsForDate(cellDate);
+                const eventsContainer = document.createElement('div');
+                eventsContainer.className = 'events-container';
+                
+                if (dayEvents.length > 0) {
+                    // Show first 2-3 events (depending on mobile/desktop)
+                    const maxVisible = window.innerWidth > 768 ? 3 : 2;
+                    const visibleEvents = dayEvents.slice(0, maxVisible);
+                    
+                    visibleEvents.forEach(event => {
+                        const eventTile = document.createElement('div');
+                        eventTile.className = 'event-tile';
+                        eventTile.textContent = event.title.length > 20 ? event.title.substring(0, 18) + '...' : event.title;
+                        eventTile.title = `${event.title}\n${event.library || ''}\n${formatDate(event.startDate) || 'Date TBD'}`;
+                        eventTile.onclick = (e) => {
+                            e.stopPropagation();
+                            showEventDetails(event.eventId);
+                        };
+                        eventsContainer.appendChild(eventTile);
+                    });
+                    
+                    // Show "more" indicator if there are additional events
+                    if (dayEvents.length > maxVisible) {
+                        const moreTile = document.createElement('div');
+                        moreTile.className = 'more-events';
+                        moreTile.textContent = `+${dayEvents.length - maxVisible} more`;
+                        moreTile.onclick = (e) => {
+                            e.stopPropagation();
+                            showDayEventsModal(cellDate, dayEvents);
+                        };
+                        eventsContainer.appendChild(moreTile);
+                    }
+                    
+                    // Make entire day clickable to show all events
+                    dayElement.addEventListener('click', () => {
+                        showDayEventsModal(cellDate, dayEvents);
+                    });
+                }
+                
+                dayElement.appendChild(eventsContainer);
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        // Show day events modal
+        function showDayEventsModal(date, events) {
+            const modal = document.getElementById('dayEventsModal');
+            const modalTitle = document.getElementById('dayEventsModalTitle');
+            const modalBody = document.getElementById('dayEventsModalBody');
+            
+            modalTitle.innerHTML = `
+                <i class="fas fa-calendar-day me-2"></i>
+                Events for ${formatDate(date)}
+            `;
+            
+            modalBody.innerHTML = '';
+            
+            if (events.length === 0) {
+                modalBody.innerHTML = '<p class="text-muted text-center py-4">No events on this day</p>';
+            } else {
+                events.forEach(event => {
+                    const eventCard = document.createElement('div');
+                    eventCard.className = 'day-event-card card';
+                    eventCard.onclick = () => showEventDetails(event.eventId);
+                    
+                    const hasUrl = hasValidEventUrl(event);
+                    const eventUrl = getEventPageUrl(event);
+                    
+                    eventCard.innerHTML = `
+                        <div class="card-header">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link">` : ''}
+                            ${event.title}
+                            ${hasUrl ? '</a>' : ''}
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Library:</small><br>
+                                    <strong>${event.library || 'Not specified'}</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Time:</small><br>
+                                    <strong>${event.startTime || 'Time TBD'}</strong>
+                                </div>
+                            </div>
+                            ${event.description ? `
+                            <div class="mt-2">
+                                <small class="text-muted">Description:</small><br>
+                                <div class="text-truncate">${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}</div>
+                            </div>
+                            ` : ''}
+                            <div class="mt-2">
+                                <span class="badge bg-primary me-2">${event.category || 'General'}</span>
+                                <span class="badge bg-secondary">${event.ageGroup || 'All ages'}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    modalBody.appendChild(eventCard);
+                });
+            }
+            
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+        }
+
+        // Get events for a specific date
+        function getEventsForDate(date) {
+            const dateStr = date.toISOString().split('T')[0];
+            return getFilteredEvents().filter(event => {
+                if (!event.startDate) return false;
+                const eventDateStr = event.startDate.split('T')[0];
+                return eventDateStr === dateStr;
+            });
+        }
+
+        // Get filtered events
+        function getFilteredEvents() {
+            return filteredEvents || [];
+        }
+
+        // Show event details in modal
+        function showEventDetails(eventId) {
+            const event = allEvents.find(e => e.eventId === eventId);
+            if (!event) return;
+
+            const eventUrl = getEventPageUrl(event);
+            const hasUrl = hasValidEventUrl(event);
+
+            const modalBody = document.getElementById('eventModalBody');
+            modalBody.innerHTML = `
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Title</div>
+                    <div>${event.title || 'No title'}</div>
+                </div>
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Description</div>
+                    <div>${event.description || 'No description available'}</div>
+                </div>
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Library</div>
+                    <div>${event.library || 'Not specified'}</div>
+                </div>
+                ${hasUrl ? `
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Event Page</div>
+                    <div>
+                        <a href="${eventUrl}" target="_blank" class="library-link">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            View Event Page
+                        </a>
+                    </div>
+                </div>
+                ` : ''}
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Date & Time</div>
+                    <div>
+                        ${event.startDate ? formatDate(event.startDate) : 'Date TBD'}
+                        ${event.startTime ? `at ${event.startTime}` : ''}
+                    </div>
+                </div>
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Category</div>
+                    <div>${event.category || 'Not specified'}</div>
+                </div>
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Age Group</div>
+                    <div>${event.ageGroup || 'All ages'}</div>
+                </div>
+                ${event.registrationRequired ? `
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Registration</div>
+                    <div class="text-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Registration required
+                    </div>
+                </div>
+                ` : ''}
+                ${event.contactInfo ? `
+                <div class="event-detail-item">
+                    <div class="event-detail-label">Contact</div>
+                    <div>${event.contactInfo}</div>
+                </div>
+                ` : ''}
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            modal.show();
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            } catch (error) {
+                return dateString;
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+    </script>
+</body>
+</html>
