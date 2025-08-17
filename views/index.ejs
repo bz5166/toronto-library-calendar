@@ -1445,7 +1445,7 @@
                 <div class="event-detail-item">
                     <div class="event-detail-label">Date & Time</div>
                     <div>
-                        ${event.startDate ? formatDate(event.startDate) : 'Date TBD'}
+                        ${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}
                         ${event.startTime ? `at ${event.startTime}` : ''}
                     </div>
                 </div>
