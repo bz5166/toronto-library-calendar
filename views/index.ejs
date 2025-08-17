@@ -1221,7 +1221,7 @@
                             <strong>${event.title}</strong>
                             ${hasUrl ? '</a>' : ''}
                             <br>
-                            <small>${event.startDate ? formatDate(event.startDate) : 'Date TBD'}</small>
+                            <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
                             <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
                         </div>
                     `;
