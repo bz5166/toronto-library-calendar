@@ -1431,7 +1431,9 @@
                 const dayElement = document.createElement('div');
                 dayElement.className = 'calendar-day';
                 
-                if (cellDate.getMonth() !== month) {
+                // Fix: Check if the cell date is outside the current month
+                // A day is "other month" if it's before the first day of the month or after the last day
+                if (cellDate < firstDay || cellDate > lastDay) {
                     dayElement.classList.add('other-month');
                 }
                 
