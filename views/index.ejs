@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toronto Public Library Programmes Calendar</title>
+    <title>Toronto Public Library Programs Calendar</title>
     
     <!-- External CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -518,12 +518,12 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-calendar-alt me-2"></i>
-                Toronto Public Library Programmes Calendar
+                Toronto Public Library Programs Calendar
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3" id="eventCount">
                     <i class="fas fa-clock me-1"></i>
-                    Loading events...
+                    Loading programs...
                 </span>
                 <span class="navbar-text" id="locationStatus">
                     <i class="fas fa-map-marker-alt me-1"></i>
@@ -538,7 +538,7 @@
         <div class="status-bar" id="statusBar" style="display: none;">
             <div class="status-item">
                 <i class="fas fa-calendar me-1"></i>
-                <strong id="totalEvents">0</strong> total events
+                <strong id="totalEvents">0</strong> total programs
             </div>
             <div class="status-item">
                 <i class="fas fa-filter me-1"></i>
@@ -558,8 +558,8 @@
             </div>
             <div class="row">
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Search Events</label>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search events...">
+                    <label class="form-label">Search Programs</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search programs...">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Library</label>
@@ -683,7 +683,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="dayEventsModalTitle">Events for Selected Day</h5>
+                    <h5 class="modal-title" id="dayEventsModalTitle">Programs for Selected Day</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="dayEventsModalBody">
@@ -701,7 +701,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Event Details</h5>
+                    <h5 class="modal-title">Program Details</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="eventModalBody">
@@ -774,9 +774,9 @@
             updateLocationStatus();
         });
 
-        // Generate event page URL from website field in event data
+        // Generate program page URL from website field in program data
         function getEventPageUrl(event) {
-            // Use the website field from the event API data
+            // Use the website field from the program API data
             if (event.website && event.website.trim()) {
                 return event.website.trim();
             }
@@ -785,7 +785,7 @@
             return '#';
         }
 
-        // Check if event has a valid URL
+        // Check if program has a valid URL
         function hasValidEventUrl(event) {
             return event.website && event.website.trim() && event.website.trim() !== '#';
         }
@@ -1143,10 +1143,10 @@
             updateMapMarkers();
         }
 
-        // Load events from API
+        // Load programs from API
         async function loadEvents() {
             try {
-                document.getElementById('eventCount').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Loading events...';
+                document.getElementById('eventCount').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Loading programs...';
                 
                 const response = await fetch('/api/events');
                 const data = await response.json();
@@ -1155,7 +1155,7 @@
                     allEvents = data.events;
                     filteredEvents = [...allEvents];
                     
-                    console.log(`✅ Loaded ${allEvents.length} events`);
+                    console.log(`✅ Loaded ${allEvents.length} programs`);
                     
                     updateEventCount();
                     updateStatusBar();
@@ -1168,7 +1168,7 @@
                 }
             } catch (error) {
                 console.error('❌ Error loading events:', error);
-                document.getElementById('eventCount').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Error loading events';
+                document.getElementById('eventCount').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Error loading programs';
             }
         }
 
@@ -1212,13 +1212,13 @@
             filterEvents();
         }
 
-        // Update event count
+        // Update program count
         function updateEventCount() {
             const total = allEvents.length;
             const showing = filteredEvents.length;
             document.getElementById('eventCount').innerHTML = `
                 <i class="fas fa-calendar-check me-1"></i>
-                ${showing} of ${total} events
+                ${showing} of ${total} programs
             `;
         }
 
@@ -1367,12 +1367,12 @@
             return `
                 <div class="library-popup">
                     <h3>${libraryName}</h3>
-                    <p><strong>${events.length} events</strong></p>
+                                            <p><strong>${events.length} programs</strong></p>
                     ${locationData?.address ? `<p>📍 ${locationData.address}</p>` : ''}
                     ${locationData?.phone ? `<p>📞 ${locationData.phone}</p>` : ''}
                     <div class="event-list">
                         ${eventList}
-                        ${events.length > 5 ? `<div class="popup-event">...and ${events.length - 5} more events</div>` : ''}
+                        ${events.length > 5 ? `<div class="popup-event">...and ${events.length - 5} more programs</div>` : ''}
                     </div>
                 </div>
             `;
@@ -1405,9 +1405,9 @@
                 fragment.appendChild(dayHeader);
             });
             
-            // Pre-calculate events for ONLY the current month
-            const monthEvents = new Map();
-            const eventsData = getFilteredEvents();
+                    // Pre-calculate programs for ONLY the current month
+        const monthEvents = new Map();
+        const eventsData = getFilteredEvents();
             
             eventsData.forEach(event => {
                 if (!event.startDate) return;
@@ -1451,7 +1451,7 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Only show events for days that belong to the current month
+                // Only show programs for days that belong to the current month
                 if (cellDate >= firstDay && cellDate <= lastDay) {
                     const dateKey = cellDate.toISOString().split('T')[0];
                     const dayEvents = monthEvents.get(dateKey) || [];
@@ -1502,21 +1502,21 @@
             calendarGrid.appendChild(fragment);
         }
 
-        // Show day events modal
+        // Show day programs modal
         function showDayEventsModal(date, events) {
             const modal = document.getElementById('dayEventsModal');
             const modalTitle = document.getElementById('dayEventsModalTitle');
             const modalBody = document.getElementById('dayEventsModalBody');
             
-            modalTitle.innerHTML = `
+                                        modalTitle.innerHTML = `
                 <i class="fas fa-calendar-day me-2"></i>
-                Events for ${formatDate(date)}
+                Programs for ${formatDate(date)}
             `;
             
             modalBody.innerHTML = '';
             
             if (events.length === 0) {
-                modalBody.innerHTML = '<p class="text-muted text-center py-4">No events on this day</p>';
+                modalBody.innerHTML = '<p class="text-muted text-center py-4">No programs on this day</p>';
             } else {
                 events.forEach(event => {
                     const eventCard = document.createElement('div');
@@ -1565,7 +1565,7 @@
             bootstrapModal.show();
         }
 
-        // Get events for a specific date
+        // Get programs for a specific date
         function getEventsForDate(date) {
             const dateStr = date.toISOString().split('T')[0];
             return getFilteredEvents().filter(event => {
@@ -1580,7 +1580,7 @@
             return filteredEvents || [];
         }
 
-        // Show event details in modal
+        // Show program details in modal
         function showEventDetails(eventId) {
             const event = allEvents.find(e => e.eventId === eventId);
             if (!event) return;
@@ -1604,11 +1604,11 @@
                 </div>
                 ${hasUrl ? `
                 <div class="event-detail-item">
-                    <div class="event-detail-label">Event Page</div>
+                    <div class="event-detail-label">Program Page</div>
                     <div>
                         <a href="${eventUrl}" target="_blank" class="library-link">
                             <i class="fas fa-external-link-alt me-1"></i>
-                            View Event Page
+                            View Program Page
                         </a>
                     </div>
                 </div>
