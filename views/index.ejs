@@ -521,9 +521,13 @@
                 Toronto Library Events
             </a>
             <div class="navbar-nav ms-auto">
-                <span class="navbar-text" id="eventCount">
+                <span class="navbar-text me-3" id="eventCount">
                     <i class="fas fa-clock me-1"></i>
                     Loading events...
+                </span>
+                <span class="navbar-text" id="locationStatus">
+                    <i class="fas fa-map-marker-alt me-1"></i>
+                    <span id="locationStatusText">Location not set</span>
                 </span>
             </div>
         </div>
@@ -573,6 +577,16 @@
                     <label class="form-label">Age Group</label>
                     <select class="form-select" id="ageGroupFilter">
                         <option value="">All Ages</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Distance</label>
+                    <select class="form-select" id="distanceFilter">
+                        <option value="">Any Distance</option>
+                        <option value="5">Within 5 km</option>
+                        <option value="10">Within 10 km</option>
+                        <option value="20">Within 20 km</option>
+                        <option value="50">Within 50 km</option>
                     </select>
                 </div>
                 <div class="col-md-2 mb-3">
@@ -714,6 +728,14 @@
         let markersLayer; // Layer group for markers
         let currentLocationMarker = null; // Current location marker
 
+        // Add these variables at the top of your script section
+        let filteredEventsCache = new Map();
+        let lastFilterState = '';
+        let userLocationCache = null;
+
+        // Cache for distance calculations
+        const distanceCache = new Map();
+
         // Custom pin icon for libraries
         const pinIcon = L.icon({
             iconUrl: 'data:image/svg+xml;base64,' + btoa(`
@@ -746,6 +768,10 @@
             loadFilterOptions();
             loadLibraryCoordinates();
             loadEvents();
+            
+            // Check for stored location and update status
+            checkStoredLocation();
+            updateLocationStatus();
         });
 
         // Generate event page URL from website field in event data
@@ -792,12 +818,12 @@
             }
         }
 
-        // Find and mark current location
+        // Enhanced location detection with better error handling and user feedback
         function findCurrentLocation() {
             const locationBtn = document.getElementById('locationBtn');
             
             if (!navigator.geolocation) {
-                alert('Geolocation is not supported by this browser.');
+                showLocationError('Geolocation is not supported by this browser.');
                 return;
             }
             
@@ -806,6 +832,7 @@
             locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             locationBtn.title = 'Finding location...';
             
+            // Request location with better options
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     const lat = position.coords.latitude;
@@ -814,71 +841,32 @@
                     
                     console.log(`📍 Current location: ${lat}, ${lng} (accuracy: ${accuracy}m)`);
                     
-                    // Remove existing current location marker
-                    if (currentLocationMarker) {
-                        map.removeLayer(currentLocationMarker);
-                        if (currentLocationMarker.accuracyCircle) {
-                            map.removeLayer(currentLocationMarker.accuracyCircle);
-                        }
-                    }
+                    // Store user location in localStorage for future use
+                    localStorage.setItem('userLocation', JSON.stringify({
+                        lat: lat,
+                        lng: lng,
+                        accuracy: accuracy,
+                        timestamp: Date.now()
+                    }));
                     
-                    // Add current location marker
-                    currentLocationMarker = L.marker([lat, lng], { 
-                        icon: currentLocationIcon,
-                        zIndexOffset: 1000 // Ensure it appears above other markers
-                    });
+                    // Update map with user location
+                    updateMapWithUserLocation(lat, lng, accuracy);
                     
-                    currentLocationMarker.bindPopup(`
-                        <div style="text-align: center;">
-                            <strong>📍 Your Location</strong><br>
-                            <small>Accuracy: ~${Math.round(accuracy)}m</small><br>
-                            <button onclick="findNearestLibraries(${lat}, ${lng})" class="btn btn-sm btn-primary mt-2">
-                                Find Nearest Libraries
-                            </button>
-                        </div>
-                    `).openPopup();
-                    
-                    currentLocationMarker.addTo(map);
-                    
-                    // Center map on current location
-                    map.setView([lat, lng], 14);
+                    // Find and highlight nearest libraries
+                    findNearestLibraries(lat, lng);
                     
                     // Reset button state
                     locationBtn.classList.remove('loading');
                     locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
-                    locationBtn.title = 'Find my location';
+                    locationBtn.title = 'Location found! Click to update';
                     
-                    // Add accuracy circle
-                    const accuracyCircle = L.circle([lat, lng], {
-                        radius: accuracy,
-                        fillColor: '#4285f4',
-                        fillOpacity: 0.1,
-                        color: '#4285f4',
-                        weight: 1
-                    }).addTo(map);
+                    // Show success message
+                    showLocationSuccess(`Location found! Accuracy: ~${Math.round(accuracy)}m`);
                     
-                    // Store reference to remove later if needed
-                    currentLocationMarker.accuracyCircle = accuracyCircle;
                 },
                 function(error) {
                     console.error('❌ Location error:', error);
-                    let errorMessage = 'Could not get your location. ';
-                    
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage += 'Please allow location access and try again.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location information is unavailable.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage += 'Location request timed out.';
-                            break;
-                        default:
-                            errorMessage += 'An unknown error occurred.';
-                    }
-                    
-                    alert(errorMessage);
+                    handleLocationError(error);
                     
                     // Reset button state
                     locationBtn.classList.remove('loading');
@@ -887,13 +875,13 @@
                 },
                 {
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 15000, // Increased timeout
                     maximumAge: 300000 // 5 minutes
                 }
             );
         }
 
-        // Find nearest libraries to current location
+        // Enhanced nearest libraries function
         function findNearestLibraries(userLat, userLng) {
             const librariesWithDistance = [];
             
@@ -914,6 +902,12 @@
             
             console.log('📍 Nearest libraries:', nearestLibraries);
             
+            // Only highlight nearest libraries if no distance filter is active
+            const distanceFilter = document.getElementById('distanceFilter').value;
+            if (!distanceFilter) {
+                highlightNearestLibraries(nearestLibraries);
+            }
+            
             // Create popup content with nearest libraries
             let popupContent = '<div><strong>📚 Nearest Libraries:</strong><br>';
             nearestLibraries.forEach((lib, index) => {
@@ -932,8 +926,65 @@
             }
         }
 
-        // Calculate distance between two coordinates (Haversine formula)
+        // New function to highlight nearest libraries
+        function highlightNearestLibraries(nearestLibraries) {
+            // Remove existing highlights
+            if (window.nearestLibraryMarkers) {
+                window.nearestLibraryMarkers.forEach(marker => {
+                    if (map.hasLayer(marker)) {
+                        map.removeLayer(marker);
+                    }
+                });
+            }
+            
+            window.nearestLibraryMarkers = [];
+            
+            // Only add highlights if no distance filter is active
+            const distanceFilter = document.getElementById('distanceFilter').value;
+            if (distanceFilter) {
+                console.log('📍 Distance filter active, skipping library highlights');
+                return;
+            }
+            
+            // Add highlighted markers for nearest libraries
+            nearestLibraries.forEach((lib, index) => {
+                const highlightIcon = L.icon({
+                    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#28a745" width="35" height="35">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                    `),
+                    iconSize: [35, 35],
+                    iconAnchor: [17, 35],
+                    popupAnchor: [0, -35]
+                });
+                
+                const marker = L.marker([lib.coords.lat, lib.coords.lng], { 
+                    icon: highlightIcon,
+                    zIndexOffset: 500
+                });
+                
+                marker.bindPopup(`
+                    <div style="text-align: center;">
+                        <strong>🏆 #${index + 1} Nearest</strong><br>
+                        <strong>${lib.name}</strong><br>
+                        <small>📍 ${lib.distance.toFixed(1)} km away</small>
+                    </div>
+                `);
+                
+                marker.addTo(map);
+                window.nearestLibraryMarkers.push(marker);
+            });
+        }
+
+        // Optimized distance calculation with caching
         function calculateDistance(lat1, lng1, lat2, lng2) {
+            const cacheKey = `${lat1.toFixed(3)},${lng1.toFixed(3)},${lat2.toFixed(3)},${lng2.toFixed(3)}`;
+            
+            if (distanceCache.has(cacheKey)) {
+                return distanceCache.get(cacheKey);
+            }
+            
             const R = 6371; // Earth's radius in kilometers
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -941,44 +992,50 @@
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLng/2) * Math.sin(dLng/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+            const distance = R * c;
+            
+            // Cache the result
+            distanceCache.set(cacheKey, distance);
+            
+            // Limit cache size
+            if (distanceCache.size > 1000) {
+                const firstKey = distanceCache.keys().next().value;
+                distanceCache.delete(firstKey);
+            }
+            
+            return distance;
         }
 
         // Setup event listeners
         function setupEventListeners() {
-            // Calendar navigation
-            document.getElementById('prevMonth').addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() - 1);
-                renderCalendar();
+            // Use event delegation for better performance
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('#libraryFilter, #categoryFilter, #ageGroupFilter, #distanceFilter, #dateFilter')) {
+                    filterEvents();
+                }
             });
-            document.getElementById('nextMonth').addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() + 1);
-                renderCalendar();
+            
+            // Use event delegation for buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('#clearFilters')) {
+                    clearFilters();
+                } else if (e.target.matches('#clearDateFilter')) {
+                    document.getElementById('dateFilter').value = '';
+                    filterEvents();
+                } else if (e.target.matches('#locationBtn')) {
+                    findCurrentLocation();
+                } else if (e.target.matches('#prevMonth')) {
+                    currentDate.setMonth(currentDate.getMonth() - 1);
+                    renderCalendar();
+                } else if (e.target.matches('#nextMonth')) {
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                    renderCalendar();
+                } else if (e.target.matches('#todayBtn')) {
+                    currentDate = new Date();
+                    renderCalendar();
+                }
             });
-            document.getElementById('todayBtn').addEventListener('click', () => {
-                currentDate = new Date();
-                renderCalendar();
-            });
-
-            // Filter listeners
-            document.getElementById('searchInput').addEventListener('input', debounce(filterEvents, 300));
-            document.getElementById('libraryFilter').addEventListener('change', filterEvents);
-            document.getElementById('categoryFilter').addEventListener('change', filterEvents);
-            document.getElementById('ageGroupFilter').addEventListener('change', filterEvents);
-            document.getElementById('clearFilters').addEventListener('click', clearFilters);
-
-            // Date filter for map - Simple, no debounce
-            document.getElementById('dateFilter').addEventListener('change', filterEvents);
-
-            // Clear date filter button
-            document.getElementById('clearDateFilter').addEventListener('click', function() {
-                document.getElementById('dateFilter').value = '';
-                filterEvents();
-            });
-
-            // Current location button
-            document.getElementById('locationBtn').addEventListener('click', findCurrentLocation);
-
+            
             // View toggle
             document.querySelectorAll('input[name="view"]').forEach(input => {
                 input.addEventListener('change', function() {
@@ -991,39 +1048,94 @@
             });
         }
 
-        // Filter events - Updated to work with date filter
+        // Optimized filter events function
         function filterEvents() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const library = document.getElementById('libraryFilter').value;
             const category = document.getElementById('categoryFilter').value;
             const ageGroup = document.getElementById('ageGroupFilter').value;
             const selectedDate = document.getElementById('dateFilter').value;
+            const distance = document.getElementById('distanceFilter').value;
 
+            // Create filter state string for caching
+            const filterState = `${search}|${library}|${category}|${ageGroup}|${selectedDate}|${distance}`;
+            
+            // Check cache first
+            if (filteredEventsCache.has(filterState) && filterState === lastFilterState) {
+                console.log('✅ Using cached filtered results');
+                filteredEvents = filteredEventsCache.get(filterState);
+                updateEventCount();
+                updateStatusBar();
+                renderCalendar();
+                updateMapMarkers();
+                return;
+            }
+
+            // Cache user location to avoid repeated localStorage access
+            if (distance && !userLocationCache) {
+                const storedLocation = localStorage.getItem('userLocation');
+                if (storedLocation) {
+                    try {
+                        userLocationCache = JSON.parse(storedLocation);
+                    } catch (error) {
+                        userLocationCache = null;
+                    }
+                }
+            }
+
+            // Use more efficient filtering with early exit
             filteredEvents = allEvents.filter(event => {
-                // Search filter
-                const matchesSearch = !search ||
-                    event.title.toLowerCase().includes(search) ||
-                    (event.description && event.description.toLowerCase().includes(search)) ||
-                    (event.library && event.library.toLowerCase().includes(search));
-                    
-                // Library filter
-                const matchesLibrary = !library || event.library === library;
+                // Early exit for search filter (most expensive)
+                if (search) {
+                    const searchableText = `${event.title || ''} ${event.description || ''} ${event.library || ''} ${event.category || ''}`.toLowerCase();
+                    if (!searchableText.includes(search)) return false;
+                }
                 
-                // Category filter
-                const matchesCategory = !category || event.category === category;
+                // Early exit for library filter
+                if (library && event.library !== library) return false;
                 
-                // Age group filter
-                const matchesAgeGroup = !ageGroup || event.ageGroup === ageGroup;
+                // Early exit for category filter
+                if (category && event.category !== category) return false;
                 
-                // Date filter
-                const matchesDate = !selectedDate || (() => {
+                // Early exit for age group filter
+                if (ageGroup && event.ageGroup !== ageGroup) return false;
+                
+                // Early exit for date filter
+                if (selectedDate) {
                     if (!event.startDate) return false;
-                    const eventDate = new Date(event.startDate).toISOString().split('T')[0];
-                    return eventDate === selectedDate;
-                })();
+                    const eventDate = event.startDate.split('T')[0];
+                    if (eventDate !== selectedDate) return false;
+                }
 
-                return matchesSearch && matchesLibrary && matchesCategory && matchesAgeGroup && matchesDate;
+                // Early exit for distance filter
+                if (distance) {
+                    if (!userLocationCache || !event.library) return false;
+                    
+                    const libraryCoords = libraryCoordinates[event.library];
+                    if (!libraryCoords) return false;
+                    
+                    const eventDistance = calculateDistance(
+                        userLocationCache.lat, 
+                        userLocationCache.lng, 
+                        libraryCoords.lat, 
+                        libraryCoords.lng
+                    );
+                    
+                    if (eventDistance > parseFloat(distance)) return false;
+                }
+
+                return true;
             });
+
+            // Cache the result
+            filteredEventsCache.set(filterState, filteredEvents);
+            lastFilterState = filterState;
+
+            // Clear cache if it gets too large
+            if (filteredEventsCache.size > 50) {
+                const firstKey = filteredEventsCache.keys().next().value;
+                filteredEventsCache.delete(firstKey);
+            }
 
             updateEventCount();
             updateStatusBar();
@@ -1096,6 +1208,7 @@
             document.getElementById('categoryFilter').value = '';
             document.getElementById('ageGroupFilter').value = '';
             document.getElementById('dateFilter').value = ''; // Clear date filter too
+            document.getElementById('distanceFilter').value = ''; // Clear distance filter too
             filterEvents();
         }
 
@@ -1150,95 +1263,122 @@
             console.log('✅ Map initialized');
         }
 
-        // Update map markers
+        // Optimized update map markers function
         function updateMapMarkers() {
             if (!map || !markersLayer) return;
             
-            markersLayer.clearLayers(); // Clear existing markers
+            // Batch DOM operations
+            const fragment = document.createDocumentFragment();
+            
+            // Clear existing markers and highlights
+            markersLayer.clearLayers();
+            
+            // Remove any existing nearest library highlight markers
+            if (window.nearestLibraryMarkers) {
+                window.nearestLibraryMarkers.forEach(marker => {
+                    if (map.hasLayer(marker)) {
+                        map.removeLayer(marker);
+                    }
+                });
+                window.nearestLibraryMarkers = [];
+            }
             
             const eventsData = getFilteredEvents();
             
-            const eventsByLibrary = {};
+            // Pre-process events by library
+            const eventsByLibrary = new Map();
             eventsData.forEach(event => {
                 if (!event.library) return;
                 
-                if (!eventsByLibrary[event.library]) {
-                    eventsByLibrary[event.library] = [];
+                if (!eventsByLibrary.has(event.library)) {
+                    eventsByLibrary.set(event.library, []);
                 }
-                eventsByLibrary[event.library].push(event);
+                eventsByLibrary.get(event.library).push(event);
             });
             
-            Object.keys(eventsByLibrary).forEach(libraryName => {
-                const events = eventsByLibrary[libraryName];
+            // Create markers in batch
+            const markers = [];
+            eventsByLibrary.forEach((events, libraryName) => {
+                const coordinates = getLibraryCoordinates(libraryName);
+                if (!coordinates) return;
                 
-                let coordinates = null;
-                
-                const searchNames = [
-                    libraryName,
-                    libraryName.toLowerCase(),
-                    libraryName.replace(/library/i, '').trim(),
-                    libraryName.replace(/branch/i, '').trim()
-                ];
-                
-                for (const searchName of searchNames) {
-                    if (libraryCoordinates[searchName]) {
-                        coordinates = [
-                            libraryCoordinates[searchName].lat,
-                            libraryCoordinates[searchName].lng
-                        ];
-                        break;
-                    }
-                }
-                
-                if (!coordinates) {
-                    console.warn(`⚠️ No coordinates found for library: ${libraryName}`);
-                    return;
-                }
-                
-                // Create pin marker
-                const marker = L.marker(coordinates, { icon: pinIcon });
-                
-                const locationData = Object.values(libraryCoordinates).find(loc =>
-                    loc.lat === coordinates[0] && loc.lng === coordinates[1]
-                );
-                
-                let popupContent = `
-                    <div class="library-popup">
-                        <h3>${libraryName}</h3>
-                        <p><strong>${events.length} events</strong></p>
-                        ${locationData?.address ? `<p>📍 ${locationData.address}</p>` : ''}
-                        ${locationData?.phone ? `<p>📞 ${locationData.phone}</p>` : ''}
-                        <div class="event-list">
-                `;
-                
-                events.slice(0, 5).forEach(event => {
-                    const eventUrl = getEventPageUrl(event);
-                    const hasUrl = hasValidEventUrl(event);
-                    
-                    popupContent += `
-                        <div class="popup-event">
-                            ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link" onclick="event.stopPropagation()">` : ''}
-                            <strong>${event.title}</strong>
-                            ${hasUrl ? '</a>' : ''}
-                            <br>
-                            <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
-                            <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
-                        </div>
-                    `;
-                });
-                
-                if (events.length > 5) {
-                    popupContent += `<div class="popup-event">...and ${events.length - 5} more events</div>`;
-                }
-                
-                popupContent += '</div></div>';
-                
-                marker.bindPopup(popupContent);
-                markersLayer.addLayer(marker);
+                const marker = createLibraryMarker(coordinates, libraryName, events);
+                markers.push(marker);
             });
+            
+            // Add all markers at once
+            markers.forEach(marker => markersLayer.addLayer(marker));
         }
 
-        // Calendar rendering with event titles
+        // Helper function to get library coordinates efficiently
+        function getLibraryCoordinates(libraryName) {
+            // Use a more efficient lookup
+            const searchNames = [
+                libraryName,
+                libraryName.toLowerCase(),
+                libraryName.replace(/library/i, '').trim(),
+                libraryName.replace(/branch/i, '').trim()
+            ];
+            
+            for (const searchName of searchNames) {
+                if (libraryCoordinates[searchName]) {
+                    return [
+                        libraryCoordinates[searchName].lat,
+                        libraryCoordinates[searchName].lng
+                    ];
+                }
+            }
+            return null;
+        }
+
+        // Helper function to create library marker
+        function createLibraryMarker(coordinates, libraryName, events) {
+            const marker = L.marker(coordinates, { icon: pinIcon });
+            
+            const locationData = Object.values(libraryCoordinates).find(loc =>
+                loc.lat === coordinates[0] && loc.lng === coordinates[1]
+            );
+            
+            // Pre-build popup content more efficiently
+            const popupContent = buildPopupContent(libraryName, events, locationData);
+            marker.bindPopup(popupContent);
+            
+            return marker;
+        }
+
+        // Helper function to build popup content
+        function buildPopupContent(libraryName, events, locationData) {
+            const eventList = events.slice(0, 5).map(event => {
+                const eventUrl = getEventPageUrl(event);
+                const hasUrl = hasValidEventUrl(event);
+                
+                return `
+                    <div class="popup-event">
+                        ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link" onclick="event.stopPropagation()">` : ''}
+                        <strong>${event.title}</strong>
+                        ${hasUrl ? '</a>' : ''}
+                        <br>
+                        <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
+                        <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
+                    </div>
+                `;
+            }).join('');
+            
+            return `
+                <div class="library-popup">
+                    <h3>${libraryName}</h3>
+                    <p><strong>${events.length} events</strong></p>
+                    ${locationData?.address ? `<p>📍 ${locationData.address}</p>` : ''}
+                    ${locationData?.phone ? `<p>📞 ${locationData.phone}</p>` : ''}
+                    <div class="event-list">
+                        ${eventList}
+                        ${events.length > 5 ? `<div class="popup-event">...and ${events.length - 5} more events</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Optimized calendar rendering
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -1252,7 +1392,9 @@
             startDate.setDate(startDate.getDate() - firstDay.getDay());
             
             const calendarGrid = document.getElementById('calendarGrid');
-            calendarGrid.innerHTML = '';
+            
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
             
             // Add day headers
             const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1260,7 +1402,23 @@
                 const dayHeader = document.createElement('div');
                 dayHeader.className = 'calendar-day-header';
                 dayHeader.textContent = day;
-                calendarGrid.appendChild(dayHeader);
+                fragment.appendChild(dayHeader);
+            });
+            
+            // Pre-calculate events for the month
+            const monthEvents = new Map();
+            const eventsData = getFilteredEvents();
+            
+            eventsData.forEach(event => {
+                if (!event.startDate) return;
+                const eventDate = new Date(event.startDate);
+                if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
+                    const dateKey = eventDate.toISOString().split('T')[0];
+                    if (!monthEvents.has(dateKey)) {
+                        monthEvents.set(dateKey, []);
+                    }
+                    monthEvents.get(dateKey).push(event);
+                }
             });
             
             // Add calendar days
@@ -1286,13 +1444,14 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Add event titles
-                const dayEvents = getEventsForDate(cellDate);
-                const eventsContainer = document.createElement('div');
-                eventsContainer.className = 'events-container';
+                // Add event titles efficiently
+                const dateKey = cellDate.toISOString().split('T')[0];
+                const dayEvents = monthEvents.get(dateKey) || [];
                 
                 if (dayEvents.length > 0) {
-                    // Show first 2-3 events (depending on mobile/desktop)
+                    const eventsContainer = document.createElement('div');
+                    eventsContainer.className = 'events-container';
+                    
                     const maxVisible = window.innerWidth > 768 ? 3 : 2;
                     const visibleEvents = dayEvents.slice(0, maxVisible);
                     
@@ -1308,7 +1467,6 @@
                         eventsContainer.appendChild(eventTile);
                     });
                     
-                    // Show "more" indicator if there are additional events
                     if (dayEvents.length > maxVisible) {
                         const moreTile = document.createElement('div');
                         moreTile.className = 'more-events';
@@ -1320,15 +1478,19 @@
                         eventsContainer.appendChild(moreTile);
                     }
                     
-                    // Make entire day clickable to show all events
                     dayElement.addEventListener('click', () => {
                         showDayEventsModal(cellDate, dayEvents);
                     });
+                    
+                    dayElement.appendChild(eventsContainer);
                 }
                 
-                dayElement.appendChild(eventsContainer);
-                calendarGrid.appendChild(dayElement);
+                fragment.appendChild(dayElement);
             }
+            
+            // Clear and append all at once
+            calendarGrid.innerHTML = '';
+            calendarGrid.appendChild(fragment);
         }
 
         // Show day events modal
@@ -1494,16 +1656,425 @@
             }
         }
 
-        function debounce(func, wait) {
+        // Enhanced debounce function
+        function debounce(func, wait, immediate) {
             let timeout;
             return function executedFunction(...args) {
                 const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
+                    timeout = null;
+                    if (!immediate) func(...args);
                 };
+                const callNow = immediate && !timeout;
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
+                if (callNow) func(...args);
             };
+        }
+
+        // Enhanced error handling
+        function handleLocationError(error) {
+            let errorMessage = 'Could not get your location. ';
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += 'Please allow location access in your browser settings and try again.';
+                    showLocationError(errorMessage, 'permission');
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += 'Location information is unavailable. Please check your device settings.';
+                    showLocationError(errorMessage, 'unavailable');
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += 'Location request timed out. Please try again.';
+                    showLocationError(errorMessage, 'timeout');
+                    break;
+                default:
+                    errorMessage += 'An unknown error occurred.';
+                    showLocationError(errorMessage, 'unknown');
+            }
+        }
+
+        // New function to show location success
+        function showLocationSuccess(message) {
+            // Create a temporary success notification
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Enhanced error display
+        function showLocationError(message, type = 'general') {
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+            
+            let icon = 'fas fa-exclamation-triangle';
+            if (type === 'permission') {
+                icon = 'fas fa-lock';
+            } else if (type === 'unavailable') {
+                icon = 'fas fa-map-marker-slash';
+            } else if (type === 'timeout') {
+                icon = 'fas fa-clock';
+            }
+            
+            notification.innerHTML = `
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 8 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 8000);
+        }
+
+        // New function to check for stored location on page load
+        function checkStoredLocation() {
+            const storedLocation = localStorage.getItem('userLocation');
+            if (storedLocation) {
+                try {
+                    const location = JSON.parse(storedLocation);
+                    const age = Date.now() - location.timestamp;
+                    
+                    // Use stored location if it's less than 30 minutes old
+                    if (age < 30 * 60 * 1000) {
+                        console.log('📍 Using stored location');
+                        updateMapWithUserLocation(location.lat, location.lng, location.accuracy);
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Error parsing stored location:', error);
+                }
+            }
+            return false;
+        }
+
+        // New function to update map with user location
+        function updateMapWithUserLocation(lat, lng, accuracy) {
+            // Remove existing current location marker
+            if (currentLocationMarker) {
+                map.removeLayer(currentLocationMarker);
+                if (currentLocationMarker.accuracyCircle) {
+                    map.removeLayer(currentLocationMarker.accuracyCircle);
+                }
+            }
+            
+            // Add current location marker
+            currentLocationMarker = L.marker([lat, lng], { 
+                icon: currentLocationIcon,
+                zIndexOffset: 1000
+            });
+            
+            currentLocationMarker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>📍 Your Location</strong><br>
+                    <small>Accuracy: ~${Math.round(accuracy)}m</small><br>
+                    <button onclick="findNearestLibraries(${lat}, ${lng})" class="btn btn-sm btn-primary mt-2">
+                        Find Nearest Libraries
+                    </button>
+                </div>
+            `).openPopup();
+            
+            currentLocationMarker.addTo(map);
+            
+            // Center map on current location
+            map.setView([lat, lng], 14);
+            
+            // Add accuracy circle
+            const accuracyCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                fillColor: '#4285f4',
+                fillOpacity: 0.1,
+                color: '#4285f4',
+                weight: 1
+            }).addTo(map);
+            
+            currentLocationMarker.accuracyCircle = accuracyCircle;
+        }
+
+        // Request location permission on page load
+        function requestLocationPermission() {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                    if (result.state === 'granted') {
+                        console.log('✅ Location permission already granted');
+                        // Optionally auto-detect location
+                        // findCurrentLocation();
+                    } else if (result.state === 'prompt') {
+                        console.log('📍 Location permission will be requested when needed');
+                    } else if (result.state === 'denied') {
+                        console.log('❌ Location permission denied');
+                        showLocationError('Location access is blocked. Please enable it in your browser settings.', 'permission');
+                    }
+                });
+            }
+        }
+
+        // Add event listener for distance filter
+        document.getElementById('distanceFilter').addEventListener('change', filterEvents);
+
+        // Apply debouncing to search input
+        document.getElementById('searchInput').addEventListener('input', debounce(filterEvents, 300));
+
+        // Add this to your filter section in the HTML
+        // Add this inside the filter-section div, after the existing filters:
+
+        // Add this JavaScript function:
+
+        // Add this to your navbar, after the existing navbar-text
+        // Add this to the navbar, after the existing navbar-text
+        function updateLocationStatus() {
+            const storedLocation = localStorage.getItem('userLocation');
+            const statusElement = document.getElementById('locationStatusText');
+            const iconElement = document.getElementById('locationStatus').querySelector('i');
+            
+            if (storedLocation) {
+                try {
+                    const location = JSON.parse(storedLocation);
+                    const age = Date.now() - location.timestamp;
+                    
+                    if (age < 30 * 60 * 1000) { // Less than 30 minutes old
+                        statusElement.textContent = 'Location available';
+                        iconElement.className = 'fas fa-map-marker-alt me-1 text-success';
+                    } else {
+                        statusElement.textContent = 'Location expired';
+                        iconElement.className = 'fas fa-map-marker-alt me-1 text-warning';
+                    }
+                } catch (error) {
+                    statusElement.textContent = 'Location error';
+                    iconElement.className = 'fas fa-map-marker-alt me-1 text-danger';
+                }
+            } else {
+                statusElement.textContent = 'Location not set';
+                iconElement.className = 'fas fa-map-marker-alt me-1 text-muted';
+            }
+        }
+
+        // Call this function after location operations
+        // Add to findCurrentLocation() and checkStoredLocation()
+
+        // Add performance monitoring
+        function measurePerformance(name, fn) {
+            return function(...args) {
+                const start = performance.now();
+                const result = fn.apply(this, args);
+                const end = performance.now();
+                console.log(`⏱️ ${name} took ${(end - start).toFixed(2)}ms`);
+                return result;
+            };
+        }
+
+        // Wrap key functions with performance monitoring
+        const originalFilterEvents = filterEvents;
+        filterEvents = measurePerformance('filterEvents', originalFilterEvents);
+
+        const originalRenderCalendar = renderCalendar;
+        renderCalendar = measurePerformance('renderCalendar', originalRenderCalendar);
+
+        const originalUpdateMapMarkers = updateMapMarkers;
+        updateMapMarkers = measurePerformance('updateMapMarkers', originalUpdateMapMarkers);
+
+        // Add this function to handle location permission requests
+        function requestLocationForDistanceFilter() {
+            if (!navigator.geolocation) {
+                showLocationError('Geolocation is not supported by this browser.');
+                return false;
+            }
+
+            // Check if we already have location permission
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                    if (result.state === 'granted') {
+                        // Permission already granted, get location
+                        getCurrentLocationForFilter();
+                    } else if (result.state === 'prompt') {
+                        // Permission not determined, request it
+                        getCurrentLocationForFilter();
+                    } else if (result.state === 'denied') {
+                        // Permission denied, show error
+                        showLocationError('Location access is required for distance filtering. Please enable it in your browser settings.', 'permission');
+                        // Reset the distance filter
+                        document.getElementById('distanceFilter').value = '';
+                    }
+                });
+            } else {
+                // Fallback for browsers that don't support permissions API
+                getCurrentLocationForFilter();
+            }
+        }
+
+        // Function to get current location specifically for filtering
+        function getCurrentLocationForFilter() {
+            const locationBtn = document.getElementById('locationBtn');
+            
+            // Show loading state on the location button
+            locationBtn.classList.add('loading');
+            locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            locationBtn.title = 'Getting location for filter...';
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    console.log(`📍 Location obtained for filter: ${lat}, ${lng} (accuracy: ${accuracy}m)`);
+                    
+                    // Store user location
+                    localStorage.setItem('userLocation', JSON.stringify({
+                        lat: lat,
+                        lng: lng,
+                        accuracy: accuracy,
+                        timestamp: Date.now()
+                    }));
+                    
+                    // Update location cache
+                    userLocationCache = { lat, lng, accuracy };
+                    
+                    // Reset button state
+                    locationBtn.classList.remove('loading');
+                    locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+                    locationBtn.title = 'Location found! Click to update';
+                    
+                    // Show success message
+                    showLocationSuccess(`Location obtained! Distance filter is now active.`);
+                    
+                    // Update the map if we're in map view
+                    if (map && currentLocationMarker) {
+                        updateMapWithUserLocation(lat, lng, accuracy);
+                    }
+                    
+                    // Apply the filter
+                    filterEvents();
+                    
+                },
+                function(error) {
+                    console.error('❌ Location error for filter:', error);
+                    handleLocationError(error);
+                    
+                    // Reset button state
+                    locationBtn.classList.remove('loading');
+                    locationBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+                    locationBtn.title = 'Find my location';
+                    
+                    // Reset the distance filter since we couldn't get location
+                    document.getElementById('distanceFilter').value = '';
+                    
+                    // Apply filters without distance
+                    filterEvents();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 300000 // 5 minutes
+                }
+            );
+        }
+
+        // Update the setupEventListeners function to handle distance filter changes
+        function setupEventListeners() {
+            // Use event delegation for filter changes
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('#libraryFilter, #categoryFilter, #ageGroupFilter, #dateFilter')) {
+                    filterEvents();
+                } else if (e.target.matches('#distanceFilter')) {
+                    handleDistanceFilterChange(e.target.value);
+                }
+            });
+            
+            // Use event delegation for buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('#clearFilters')) {
+                    clearFilters();
+                } else if (e.target.matches('#clearDateFilter')) {
+                    document.getElementById('dateFilter').value = '';
+                    filterEvents();
+                } else if (e.target.matches('#locationBtn')) {
+                    findCurrentLocation();
+                } else if (e.target.matches('#prevMonth')) {
+                    currentDate.setMonth(currentDate.getMonth() - 1);
+                    renderCalendar();
+                } else if (e.target.matches('#nextMonth')) {
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                    renderCalendar();
+                } else if (e.target.matches('#todayBtn')) {
+                    currentDate = new Date();
+                    renderCalendar();
+                }
+            });
+            
+            // View toggle
+            document.querySelectorAll('input[name="view"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    if (this.value === 'calendar') {
+                        showCalendarView();
+                    } else if (this.value === 'map') {
+                        showMapView();
+                    }
+                });
+            });
+        }
+
+        // New function to handle distance filter changes
+        function handleDistanceFilterChange(distanceValue) {
+            if (!distanceValue) {
+                // Distance filter cleared, just apply filters
+                filterEvents();
+                return;
+            }
+            
+            // Check if we have stored location
+            const storedLocation = localStorage.getItem('userLocation');
+            if (storedLocation) {
+                try {
+                    const location = JSON.parse(storedLocation);
+                    const age = Date.now() - location.timestamp;
+                    
+                    // Use stored location if it's less than 30 minutes old
+                    if (age < 30 * 60 * 1000) {
+                        console.log('📍 Using stored location for distance filter');
+                        userLocationCache = location;
+                        filterEvents();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error parsing stored location:', error);
+                }
+            }
+            
+            // No valid stored location, request permission
+            console.log('📍 No valid stored location, requesting permission for distance filter');
+            requestLocationForDistanceFilter();
+        }
+
+        // Update the clearFilters function to also clear distance filter
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('libraryFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('ageGroupFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('distanceFilter').value = ''; // Clear distance filter too
+            filterEvents();
         }
     </script>
 </body>

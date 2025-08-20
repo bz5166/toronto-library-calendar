@@ -409,4 +409,77 @@ router.get('/locations', async (req, res) => {
     });
   }
 });
+
+// GET /nearby - Get events near a specific location
+router.get('/nearby', async (req, res) => {
+  try {
+    const { lat, lng, radius = 10 } = req.query; // radius in km
+    
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        error: 'Latitude and longitude are required'
+      });
+    }
+
+    if (!libraryAPI || !processor) {
+      return res.json({
+        success: false,
+        error: 'Services not properly configured',
+        events: []
+      });
+    }
+
+    // Get all events
+    const { events } = await libraryAPI.getAllLibraryEvents();
+    let processedEvents = events.map(event => processor.normalizeEvent(event));
+    
+    // Filter events by distance
+    const nearbyEvents = processedEvents.filter(event => {
+      if (!event.library) return false;
+      
+      const libraryCoords = libraryCoordinates[event.library];
+      if (!libraryCoords) return false;
+      
+      const distance = calculateDistance(
+        parseFloat(lat), 
+        parseFloat(lng), 
+        libraryCoords.lat, 
+        libraryCoords.lng
+      );
+      
+      return distance <= parseFloat(radius);
+    });
+
+    console.log(`📍 Found ${nearbyEvents.length} events within ${radius}km of (${lat}, ${lng})`);
+
+    res.json({
+      success: true,
+      events: nearbyEvents,
+      total: nearbyEvents.length,
+      location: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      radius: parseFloat(radius)
+    });
+
+  } catch (error) {
+    console.error('❌ Nearby events error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      events: []
+    });
+  }
+});
+
+// Helper function for distance calculation
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 module.exports = router;
