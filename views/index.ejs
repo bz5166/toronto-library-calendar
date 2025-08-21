@@ -1492,6 +1492,9 @@
 
         // Optimized calendar rendering
         function renderCalendar() {
+            console.log('⏱️ Calendar rendering started at:', new Date().toISOString());
+            console.log('📍 Current date:', currentDate);
+            
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             
