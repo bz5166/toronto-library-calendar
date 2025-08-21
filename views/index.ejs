@@ -1517,9 +1517,9 @@
                 fragment.appendChild(dayHeader);
             });
             
-                    // Pre-calculate programs for ONLY the current month
-        const monthEvents = new Map();
-        const eventsData = getFilteredEvents();
+            // Pre-calculate programs for ONLY the current month
+            const monthEvents = new Map();
+            const eventsData = getFilteredEvents();
             
             eventsData.forEach(event => {
                 if (!event.startDate) return;
@@ -1563,47 +1563,45 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Only show programs for days that belong to the current month
-                if (cellDate >= firstDay && cellDate <= lastDay) {
-                    const dateKey = cellDate.toISOString().split('T')[0];
-                    const dayEvents = monthEvents.get(dateKey) || [];
+                // Show programs for ALL days in the calendar grid, but only if they have events
+                const dateKey = cellDate.toISOString().split('T')[0];
+                const dayEvents = monthEvents.get(dateKey) || [];
+                
+                if (dayEvents.length > 0) {
+                    const eventsContainer = document.createElement('div');
+                    eventsContainer.className = 'events-container';
                     
-                    if (dayEvents.length > 0) {
-                        const eventsContainer = document.createElement('div');
-                        eventsContainer.className = 'events-container';
-                        
-                        const maxVisible = window.innerWidth > 768 ? 3 : 2;
-                        const visibleEvents = dayEvents.slice(0, maxVisible);
-                        
-                        visibleEvents.forEach(event => {
-                            const eventTile = document.createElement('div');
-                            eventTile.className = 'event-tile';
-                            eventTile.textContent = event.title.length > 20 ? event.title.substring(0, 18) + '...' : event.title;
-                            eventTile.title = `${event.title}\n${event.library || ''}\n${formatDate(event.startDate) || 'Date TBD'}`;
-                            eventTile.onclick = (e) => {
-                                e.stopPropagation();
-                                showEventDetails(event.eventId);
-                            };
-                            eventsContainer.appendChild(eventTile);
-                        });
-                        
-                        if (dayEvents.length > maxVisible) {
-                            const moreTile = document.createElement('div');
-                            moreTile.className = 'more-events';
-                            moreTile.textContent = `+${dayEvents.length - maxVisible} more`;
-                            moreTile.onclick = (e) => {
-                                e.stopPropagation();
-                                showDayEventsModal(cellDate, dayEvents);
-                            };
-                            eventsContainer.appendChild(moreTile);
-                        }
-                        
-                        dayElement.addEventListener('click', () => {
+                    const maxVisible = window.innerWidth > 768 ? 3 : 2;
+                    const visibleEvents = dayEvents.slice(0, maxVisible);
+                    
+                    visibleEvents.forEach(event => {
+                        const eventTile = document.createElement('div');
+                        eventTile.className = 'event-tile';
+                        eventTile.textContent = event.title.length > 20 ? event.title.substring(0, 18) + '...' : event.title;
+                        eventTile.title = `${event.title}\n${event.library || ''}\n${formatDate(event.startDate) || 'Date TBD'}`;
+                        eventTile.onclick = (e) => {
+                            e.stopPropagation();
+                            showEventDetails(event.eventId);
+                        };
+                        eventsContainer.appendChild(eventTile);
+                    });
+                    
+                    if (dayEvents.length > maxVisible) {
+                        const moreTile = document.createElement('div');
+                        moreTile.className = 'more-events';
+                        moreTile.textContent = `+${dayEvents.length - maxVisible} more`;
+                        moreTile.onclick = (e) => {
+                            e.stopPropagation();
                             showDayEventsModal(cellDate, dayEvents);
-                        });
-                        
-                        dayElement.appendChild(eventsContainer);
+                        };
+                        eventsContainer.appendChild(moreTile);
                     }
+                    
+                    dayElement.addEventListener('click', () => {
+                        showDayEventsModal(cellDate, dayEvents);
+                    });
+                    
+                    dayElement.appendChild(eventsContainer);
                 }
                 
                 fragment.appendChild(dayElement);
