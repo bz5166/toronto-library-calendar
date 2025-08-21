@@ -1490,11 +1490,8 @@
             `;
         }
 
-        // Optimized calendar rendering
+        // Optimized calendar rendering with debugging
         function renderCalendar() {
-            console.log('⏱️ Calendar rendering started at:', new Date().toISOString());
-            console.log('📍 Current date:', currentDate);
-            
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             
@@ -1524,6 +1521,8 @@
             const monthEvents = new Map();
             const eventsData = getFilteredEvents();
             
+            console.log('🔍 Debug: Total filtered events:', eventsData.length);
+            
             eventsData.forEach(event => {
                 if (!event.startDate) return;
                 const eventDate = new Date(event.startDate);
@@ -1535,6 +1534,9 @@
                     monthEvents.get(dateKey).push(event);
                 }
             });
+            
+            console.log('🔍 Debug: Month events map:', monthEvents);
+            console.log('🔍 Debug: First day of month:', firstDay.toISOString().split('T')[0]);
             
             // Calculate the number of weeks needed for this month
             const endDate = new Date(lastDay);
@@ -1569,6 +1571,13 @@
                 // Show programs for ALL days in the calendar grid, but only if they have events
                 const dateKey = cellDate.toISOString().split('T')[0];
                 const dayEvents = monthEvents.get(dateKey) || [];
+                
+                // Debug logging for the first day of the month
+                if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
+                    console.log('🔍 Debug: Day 1 dateKey:', dateKey);
+                    console.log('🔍 Debug: Day 1 events found:', dayEvents.length);
+                    console.log('🔍 Debug: Day 1 events:', dayEvents);
+                }
                 
                 if (dayEvents.length > 0) {
                     const eventsContainer = document.createElement('div');
