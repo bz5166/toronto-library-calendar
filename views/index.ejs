@@ -1490,7 +1490,7 @@
             `;
         }
 
-        // Optimized calendar rendering with debugging
+        // Optimized calendar rendering with timezone safety
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -1521,12 +1521,13 @@
             const monthEvents = new Map();
             const eventsData = getFilteredEvents();
             
-            console.log('🔍 Debug: Total filtered events:', eventsData.length);
-            
             eventsData.forEach(event => {
                 if (!event.startDate) return;
-                const eventDate = new Date(event.startDate);
-                if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
+                
+                // Use UTC date parsing to avoid timezone issues
+                const eventDate = new Date(event.startDate + 'T00:00:00.000Z');
+                if (eventDate.getUTCFullYear() === year && eventDate.getUTCMonth() === month) {
+                    // Use UTC date string for consistent key generation
                     const dateKey = eventDate.toISOString().split('T')[0];
                     if (!monthEvents.has(dateKey)) {
                         monthEvents.set(dateKey, []);
@@ -1534,9 +1535,6 @@
                     monthEvents.get(dateKey).push(event);
                 }
             });
-            
-            console.log('🔍 Debug: Month events map:', monthEvents);
-            console.log('🔍 Debug: First day of month:', firstDay.toISOString().split('T')[0]);
             
             // Calculate the number of weeks needed for this month
             const endDate = new Date(lastDay);
@@ -1568,16 +1566,9 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Show programs for ALL days in the calendar grid, but only if they have events
-                const dateKey = cellDate.toISOString().split('T')[0];
+                // Use UTC date string for consistent key matching
+                const dateKey = new Date(cellDate.getTime() - (cellDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                 const dayEvents = monthEvents.get(dateKey) || [];
-                
-                // Debug logging for the first day of the month
-                if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
-                    console.log('🔍 Debug: Day 1 dateKey:', dateKey);
-                    console.log('🔍 Debug: Day 1 events found:', dayEvents.length);
-                    console.log('🔍 Debug: Day 1 events:', dayEvents);
-                }
                 
                 if (dayEvents.length > 0) {
                     const eventsContainer = document.createElement('div');
@@ -2207,6 +2198,17 @@
             document.getElementById('distanceFilter').value = ''; // Clear distance filter too
             filterEvents();
         }
+
+        // Add this helper function
+        function getDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Then use it in your calendar rendering
+        const dateKey = getDateKey(cellDate);
     </script>
 </body>
 </html>
