@@ -1137,17 +1137,17 @@
                 } else if (e.target.matches('#locationBtn')) {
                     findCurrentLocation();
                 } else if (e.target.matches('#prevMonth')) {
-                    currentDate.setMonth(currentDate.getMonth() - 1);
-                    renderCalendar();
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
                 } else if (e.target.matches('#nextMonth')) {
-                    currentDate.setMonth(currentDate.getMonth() + 1);
-                    renderCalendar();
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
                 } else if (e.target.matches('#todayBtn')) {
-                    currentDate = new Date();
-                    renderCalendar();
+                currentDate = new Date();
+                renderCalendar();
                 }
             });
-            
+
             // View toggle
             document.querySelectorAll('input[name="view"]').forEach(input => {
                 input.addEventListener('change', function() {
@@ -1425,32 +1425,32 @@
         // Helper function to get library coordinates efficiently
         function getLibraryCoordinates(libraryName) {
             // Use a more efficient lookup
-            const searchNames = [
-                libraryName,
-                libraryName.toLowerCase(),
-                libraryName.replace(/library/i, '').trim(),
-                libraryName.replace(/branch/i, '').trim()
-            ];
-            
-            for (const searchName of searchNames) {
-                if (libraryCoordinates[searchName]) {
+                const searchNames = [
+                    libraryName,
+                    libraryName.toLowerCase(),
+                    libraryName.replace(/library/i, '').trim(),
+                    libraryName.replace(/branch/i, '').trim()
+                ];
+                
+                for (const searchName of searchNames) {
+                    if (libraryCoordinates[searchName]) {
                     return [
-                        libraryCoordinates[searchName].lat,
-                        libraryCoordinates[searchName].lng
-                    ];
+                            libraryCoordinates[searchName].lat,
+                            libraryCoordinates[searchName].lng
+                        ];
+                    }
                 }
-            }
             return null;
-        }
-
+                }
+                
         // Helper function to create library marker
         function createLibraryMarker(coordinates, libraryName, events) {
-            const marker = L.marker(coordinates, { icon: pinIcon });
-            
-            const locationData = Object.values(libraryCoordinates).find(loc =>
-                loc.lat === coordinates[0] && loc.lng === coordinates[1]
-            );
-            
+                const marker = L.marker(coordinates, { icon: pinIcon });
+                
+                const locationData = Object.values(libraryCoordinates).find(loc =>
+                    loc.lat === coordinates[0] && loc.lng === coordinates[1]
+                );
+                
             // Pre-build popup content more efficiently
             const popupContent = buildPopupContent(libraryName, events, locationData);
             marker.bindPopup(popupContent);
@@ -1461,19 +1461,19 @@
         // Helper function to build popup content
         function buildPopupContent(libraryName, events, locationData) {
             const eventList = events.slice(0, 5).map(event => {
-                const eventUrl = getEventPageUrl(event);
-                const hasUrl = hasValidEventUrl(event);
-                
+                    const eventUrl = getEventPageUrl(event);
+                    const hasUrl = hasValidEventUrl(event);
+                    
                 return `
-                    <div class="popup-event">
-                        ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link" onclick="event.stopPropagation()">` : ''}
-                        <strong>${event.title}</strong>
-                        ${hasUrl ? '</a>' : ''}
-                        <br>
-                        <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
-                        <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
-                    </div>
-                `;
+                        <div class="popup-event">
+                            ${hasUrl ? `<a href="${eventUrl}" target="_blank" class="library-link" onclick="event.stopPropagation()">` : ''}
+                            <strong>${event.title}</strong>
+                            ${hasUrl ? '</a>' : ''}
+                            <br>
+                            <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
+                            <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
+                        </div>
+                    `;
             }).join('');
             
             return `
@@ -1490,7 +1490,7 @@
             `;
         }
 
-        // Optimized calendar rendering with timezone safety
+        // Optimized calendar rendering with minimal timezone fix
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -1524,10 +1524,9 @@
             eventsData.forEach(event => {
                 if (!event.startDate) return;
                 
-                // Use UTC date parsing to avoid timezone issues
-                const eventDate = new Date(event.startDate + 'T00:00:00.000Z');
-                if (eventDate.getUTCFullYear() === year && eventDate.getUTCMonth() === month) {
-                    // Use UTC date string for consistent key generation
+                // Simple date parsing - keep it simple
+                const eventDate = new Date(event.startDate);
+                if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
                     const dateKey = eventDate.toISOString().split('T')[0];
                     if (!monthEvents.has(dateKey)) {
                         monthEvents.set(dateKey, []);
@@ -1566,8 +1565,8 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Use UTC date string for consistent key matching
-                const dateKey = new Date(cellDate.getTime() - (cellDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                // Simple date key generation - keep it consistent
+                const dateKey = cellDate.toISOString().split('T')[0];
                 const dayEvents = monthEvents.get(dateKey) || [];
                 
                 if (dayEvents.length > 0) {
@@ -1621,7 +1620,7 @@
             const modalTitle = document.getElementById('dayEventsModalTitle');
             const modalBody = document.getElementById('dayEventsModalBody');
             
-                                        modalTitle.innerHTML = `
+            modalTitle.innerHTML = `
                 <i class="fas fa-calendar-day me-2"></i>
                 Programs for ${formatDate(date)}
             `;
