@@ -49,11 +49,37 @@ mongoose.connect(mongoUri)
 // Routes
 app.use('/api/events', eventRoutes);
 
+// Add this after your existing routes
+const { SitemapStream, streamToPromise } = require('sitemap');
+
+// Sitemap route
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    res.header('Content-Type', 'application/xml');
+
+    const sitemap = new SitemapStream({ hostname: 'https://your-domain.com' });
+
+    // Add your main pages
+    sitemap.write({ url: '/', changefreq: 'daily', priority: 1.0 });
+    sitemap.write({ url: '/calendar', changefreq: 'daily', priority: 0.9 });
+    sitemap.write({ url: '/map', changefreq: 'daily', priority: 0.9 });
+    
+    sitemap.end();
+
+    // Convert to string and send
+    const xml = await streamToPromise(sitemap);
+    res.send(xml.toString());
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Library Event App is running!',
+    message: 'Library Programs App is running!',
     timestamp: new Date().toISOString() 
   });
 });
@@ -65,7 +91,7 @@ app.get('/', (req, res) => {
   } catch (error) {
     console.error('❌ Error rendering view:', error.message);
     res.send(`
-      <h1>🏛️ Toronto Library Events</h1>
+      <h1>🏛️ Toronto Public Library Programs Calendar</h1>
       <p>Server is running! Views not configured yet.</p>
       <p><a href="/health">Health Check</a></p>
       <p><a href="/api/events">API Events</a></p>

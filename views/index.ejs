@@ -3,7 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toronto Public Library Programs Calendar</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>Toronto Public Library Programs Calendar | Find Library Events & Activities</title>
+    <meta name="description" content="Discover and explore Toronto Public Library programs, events, and activities. Search by location, date, category, and age group. Free library programs for all ages across Toronto.">
+    <meta name="keywords" content="Toronto Public Library, library programs, library events, Toronto library activities, free library programs, library calendar, Toronto library schedule, library workshops, library classes">
+    <meta name="author" content="Toronto Public Library">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags for Social Media -->
+    <meta property="og:title" content="Toronto Public Library Programs Calendar">
+    <meta property="og:description" content="Discover and explore Toronto Public Library programs, events, and activities. Search by location, date, category, and age group.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://your-domain.com">
+    <meta property="og:image" content="https://your-domain.com/images/library-programs-og.jpg">
+    <meta property="og:site_name" content="Toronto Public Library Programs Calendar">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Toronto Public Library Programs Calendar">
+    <meta name="twitter:description" content="Discover and explore Toronto Public Library programs, events, and activities.">
+    <meta name="twitter:image" content="https://your-domain.com/images/library-programs-twitter.jpg">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://your-domain.com">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Toronto Public Library Programs Calendar",
+        "description": "Discover and explore Toronto Public Library programs, events, and activities. Search by location, date, category, and age group.",
+        "url": "https://your-domain.com",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CAD"
+        },
+        "provider": {
+            "@type": "Organization",
+            "name": "Toronto Public Library",
+            "url": "https://www.torontopubliclibrary.ca"
+        },
+        "audience": {
+            "@type": "Audience",
+            "audienceType": "All ages"
+        }
+    }
+    </script>
     
     <!-- External CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -510,30 +560,69 @@
         .text-success { color: var(--secondary-color) !important; }
         .text-danger { color: var(--danger-color) !important; }
         .text-warning { color: var(--warning-color) !important; }
+        
+        /* Accessibility improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .btn:focus,
+        .form-control:focus,
+        .form-select:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: var(--primary-color);
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 1000;
+        }
+
+        .skip-link:focus {
+            top: 6px;
+        }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark" role="navigation" aria-label="Main navigation">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-calendar-alt me-2"></i>
+            <a class="navbar-brand" href="/" aria-label="Toronto Public Library Programs Calendar Home">
+                <i class="fas fa-calendar-alt me-2" aria-hidden="true"></i>
                 Toronto Public Library Programs Calendar
             </a>
             <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3" id="eventCount">
-                    <i class="fas fa-clock me-1"></i>
+                <span class="navbar-text me-3" id="eventCount" aria-live="polite">
+                    <i class="fas fa-clock me-1" aria-hidden="true"></i>
                     Loading programs...
                 </span>
-                <span class="navbar-text" id="locationStatus">
-                    <i class="fas fa-map-marker-alt me-1"></i>
+                <span class="navbar-text" id="locationStatus" aria-live="polite">
+                    <i class="fas fa-map-marker-alt me-1" aria-hidden="true"></i>
                     <span id="locationStatusText">Location not set</span>
                 </span>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid main-container">
+    <main id="main-content" class="container-fluid main-container" role="main">
+        <h1 class="sr-only">Toronto Public Library Programs Calendar</h1>
+        
         <!-- Status Bar -->
         <div class="status-bar" id="statusBar" style="display: none;">
             <div class="status-item">
@@ -554,7 +643,7 @@
         <div class="filter-section">
             <div class="filter-title">
                 <i class="fas fa-filter"></i>
-                Filters
+                Search & Filter Programs
             </div>
             <div class="row">
                 <div class="col-md-3 mb-3">
@@ -676,7 +765,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Day Events Modal -->
     <div class="modal fade day-events-modal" id="dayEventsModal" tabindex="-1">
@@ -714,9 +803,32 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4" role="contentinfo">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Toronto Public Library Programs Calendar</h3>
+                    <p>Discover and explore free programs, events, and activities at Toronto Public Library branches across the city.</p>
+                    <p><a href="https://www.torontopubliclibrary.ca" target="_blank" rel="noopener">Visit Toronto Public Library</a></p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Quick Links</h4>
+                    <ul class="list-unstyled">
+                        <li><a href="#" onclick="showCalendarView(); return false;">Calendar View</a></li>
+                        <li><a href="#" onclick="showMapView(); return false;">Map View</a></li>
+                        <li><a href="/health" target="_blank">API Health Check</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
     <!-- External JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Your existing JavaScript code goes here -->
     <script>
         // Global Variables
         let allEvents = [];
