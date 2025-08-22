@@ -1260,14 +1260,19 @@
             try {
                 document.getElementById('eventCount').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Loading programs...';
                 
+                console.log('🔍 Loading events from:', window.location.origin + '/api/events');
+                
                 const response = await fetch('/api/events');
                 const data = await response.json();
+                
+                console.log('🔍 API Response:', data);
                 
                 if (data.success) {
                     allEvents = data.events;
                     filteredEvents = [...allEvents];
                     
-                    console.log(`✅ Loaded ${allEvents.length} programs`);
+                    console.log(`✅ Loaded ${allEvents.length} events`);
+                    console.log('🔍 Sample Events:', allEvents.slice(0, 3));
                     
                     updateEventCount();
                     updateStatusBar();
@@ -1490,10 +1495,28 @@
             `;
         }
 
-        // Optimized calendar rendering with fixed month boundary logic
+        // Add this debugging function at the top of your script section
+        function debugEnvironment() {
+            console.log('🔍 === ENVIRONMENT DEBUG ===');
+            console.log('🔍 Current Date:', new Date().toString());
+            console.log('🔍 Current Date ISO:', new Date().toISOString());
+            console.log(' Timezone Offset:', new Date().getTimezoneOffset());
+            console.log('🔍 User Agent:', navigator.userAgent);
+            console.log(' Window Location:', window.location.href);
+            console.log('🔍 === END ENVIRONMENT DEBUG ===');
+        }
+
+        // Update the renderCalendar function with detailed debugging
         function renderCalendar() {
+            debugEnvironment();
+            
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
+            
+            console.log('🔍 Calendar Debug:');
+            console.log('🔍 - Year:', year);
+            console.log('🔍 - Month:', month);
+            console.log('🔍 - Current Date Object:', currentDate);
             
             document.getElementById('currentMonth').textContent =
                 currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1502,6 +1525,10 @@
             const lastDay = new Date(year, month + 1, 0);
             const startDate = new Date(firstDay);
             startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            console.log('🔍 - First Day:', firstDay);
+            console.log(' - Last Day:', lastDay);
+            console.log('🔍 - Start Date:', startDate);
             
             const calendarGrid = document.getElementById('calendarGrid');
             
@@ -1521,18 +1548,26 @@
             const monthEvents = new Map();
             const eventsData = getFilteredEvents();
             
+            console.log('🔍 - Total Events:', eventsData.length);
+            console.log('🔍 - Sample Event:', eventsData[0]);
+            
             eventsData.forEach(event => {
                 if (!event.startDate) return;
                 
                 const eventDate = new Date(event.startDate);
+                console.log('🔍 - Event Date:', event.startDate, '-> Parsed:', eventDate);
+                
                 if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
                     const dateKey = eventDate.toISOString().split('T')[0];
+                    console.log('🔍 - Adding Event to DateKey:', dateKey);
                     if (!monthEvents.has(dateKey)) {
                         monthEvents.set(dateKey, []);
                     }
                     monthEvents.get(dateKey).push(event);
                 }
             });
+            
+            console.log(' - Month Events Map:', monthEvents);
             
             // Calculate the number of weeks needed for this month
             const endDate = new Date(lastDay);
@@ -1568,6 +1603,15 @@
                 // Show events for ALL days in the calendar grid
                 const dateKey = cellDate.toISOString().split('T')[0];
                 const dayEvents = monthEvents.get(dateKey) || [];
+                
+                // Debug for the first day of the month
+                if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
+                    console.log(' - Day 1 Debug:');
+                    console.log('🔍   - Cell Date:', cellDate);
+                    console.log('🔍   - Date Key:', dateKey);
+                    console.log('🔍   - Events Found:', dayEvents.length);
+                    console.log('🔍   - Events:', dayEvents);
+                }
                 
                 if (dayEvents.length > 0) {
                     const eventsContainer = document.createElement('div');
