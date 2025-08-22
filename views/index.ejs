@@ -1506,9 +1506,9 @@
             console.log('🔍 === END ENVIRONMENT DEBUG ===');
         }
 
-        // Update the renderCalendar function with detailed debugging
+        // Optimized calendar rendering with debugging
         function renderCalendar() {
-            debugEnvironment();
+            console.log(' Calendar rendering started');
             
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -1544,30 +1544,27 @@
                 fragment.appendChild(dayHeader);
             });
             
-            // Pre-calculate programs for ONLY the current month
-            const monthEvents = new Map();
+            // FIXED: Pre-calculate programs for ALL visible days in the calendar grid
+            const visibleEvents = new Map();
             const eventsData = getFilteredEvents();
             
-            console.log('🔍 - Total Events:', eventsData.length);
-            console.log('🔍 - Sample Event:', eventsData[0]);
-            
+            // Collect events for ALL dates that will be visible in the calendar
             eventsData.forEach(event => {
                 if (!event.startDate) return;
                 
                 const eventDate = new Date(event.startDate);
-                console.log('🔍 - Event Date:', event.startDate, '-> Parsed:', eventDate);
                 
-                if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
+                // Check if event falls within the visible calendar range
+                if (eventDate >= startDate && eventDate <= lastDay) {
                     const dateKey = eventDate.toISOString().split('T')[0];
-                    console.log('🔍 - Adding Event to DateKey:', dateKey);
-                    if (!monthEvents.has(dateKey)) {
-                        monthEvents.set(dateKey, []);
+                    if (!visibleEvents.has(dateKey)) {
+                        visibleEvents.set(dateKey, []);
                     }
-                    monthEvents.get(dateKey).push(event);
+                    visibleEvents.get(dateKey).push(event);
                 }
             });
             
-            console.log(' - Month Events Map:', monthEvents);
+            console.log(' - Month Events Map:', visibleEvents);
             
             // Calculate the number of weeks needed for this month
             const endDate = new Date(lastDay);
@@ -1585,7 +1582,7 @@
                 const dayElement = document.createElement('div');
                 dayElement.className = 'calendar-day';
                 
-                // FIXED: Better logic to determine if a day belongs to the current month
+                // FIXED: Only show events for days that belong to the current month
                 const isCurrentMonth = cellDate.getMonth() === month && cellDate.getFullYear() === year;
                 if (!isCurrentMonth) {
                     dayElement.classList.add('other-month');
@@ -1600,17 +1597,22 @@
                 dayNumber.textContent = cellDate.getDate();
                 dayElement.appendChild(dayNumber);
                 
-                // Show events for ALL days in the calendar grid
+                // Show events only for days in the current month
                 const dateKey = cellDate.toISOString().split('T')[0];
-                const dayEvents = monthEvents.get(dateKey) || [];
+                let dayEvents = [];
                 
-                // Debug for the first day of the month
-                if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
-                    console.log(' - Day 1 Debug:');
-                    console.log('🔍   - Cell Date:', cellDate);
-                    console.log('🔍   - Date Key:', dateKey);
-                    console.log('🔍   - Events Found:', dayEvents.length);
-                    console.log('🔍   - Events:', dayEvents);
+                // Only get events if this day belongs to the current month
+                if (isCurrentMonth) {
+                    dayEvents = visibleEvents.get(dateKey) || [];
+                    
+                    // Debug for the first day of the month
+                    if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
+                        console.log(' - Day 1 Debug:');
+                        console.log('🔍   - Cell Date:', cellDate);
+                        console.log('🔍   - Date Key:', dateKey);
+                        console.log('🔍   - Events Found:', dayEvents.length);
+                        console.log('🔍   - Events:', dayEvents);
+                    }
                 }
                 
                 if (dayEvents.length > 0) {
@@ -1656,6 +1658,8 @@
             // Clear and append all at once
             calendarGrid.innerHTML = '';
             calendarGrid.appendChild(fragment);
+            
+            console.log(' Calendar rendering completed');
         }
 
         // Show day programs modal
