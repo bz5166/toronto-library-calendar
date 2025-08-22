@@ -876,6 +876,10 @@
         // Initialize application
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Page loaded, starting initialization...');
+            
+            // Debug environment for timezone issues
+            debugEnvironment();
+            
             setupEventListeners();
             loadFilterOptions();
             loadLibraryCoordinates();
@@ -1500,9 +1504,17 @@
             console.log('🔍 === ENVIRONMENT DEBUG ===');
             console.log('🔍 Current Date:', new Date().toString());
             console.log('🔍 Current Date ISO:', new Date().toISOString());
-            console.log(' Timezone Offset:', new Date().getTimezoneOffset());
+            console.log('🔍 Timezone Offset:', new Date().getTimezoneOffset());
             console.log('🔍 User Agent:', navigator.userAgent);
-            console.log(' Window Location:', window.location.href);
+            console.log('🔍 Window Location:', window.location.href);
+            
+            // Test timezone-safe date creation
+            const testDate = new Date(Date.UTC(2024, 0, 1)); // January 1, 2024
+            console.log('🔍 Test UTC Date (Jan 1, 2024):', testDate.toString());
+            console.log('🔍 Test UTC Date ISO:', testDate.toISOString());
+            console.log('🔍 Test UTC Month:', testDate.getUTCMonth());
+            console.log('🔍 Test UTC Day:', testDate.getUTCDate());
+            
             console.log('🔍 === END ENVIRONMENT DEBUG ===');
         }
 
@@ -1521,10 +1533,11 @@
             document.getElementById('currentMonth').textContent =
                 currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
+            // Use UTC dates to avoid timezone issues
+            const firstDay = new Date(Date.UTC(year, month, 1));
+            const lastDay = new Date(Date.UTC(year, month + 1, 0));
             const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            startDate.setUTCDate(startDate.getUTCDate() - firstDay.getUTCDay());
             
             console.log('🔍 - First Day:', firstDay);
             console.log(' - Last Day:', lastDay);
@@ -1554,8 +1567,12 @@
                 
                 const eventDate = new Date(event.startDate);
                 
-                // Check if event falls within the visible calendar range
-                if (eventDate >= startDate && eventDate <= lastDay) {
+                // Check if event falls within the visible calendar range using UTC comparison
+                const eventDateUTC = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate()));
+                const startDateUTC = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+                const lastDayUTC = new Date(Date.UTC(lastDay.getUTCFullYear(), lastDay.getUTCMonth(), lastDay.getUTCDate()));
+                
+                if (eventDateUTC >= startDateUTC && eventDateUTC <= lastDayUTC) {
                     const dateKey = eventDate.toISOString().split('T')[0];
                     if (!visibleEvents.has(dateKey)) {
                         visibleEvents.set(dateKey, []);
@@ -1568,7 +1585,7 @@
             
             // Calculate the number of weeks needed for this month
             const endDate = new Date(lastDay);
-            endDate.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+            endDate.setUTCDate(lastDay.getUTCDate() + (6 - lastDay.getUTCDay()));
             const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
             const weeksNeeded = Math.ceil(totalDays / 7);
             
@@ -1577,13 +1594,13 @@
             
             for (let i = 0; i < weeksNeeded * 7; i++) {
                 const cellDate = new Date(startDate);
-                cellDate.setDate(startDate.getDate() + i);
+                cellDate.setUTCDate(startDate.getUTCDate() + i);
                 
                 const dayElement = document.createElement('div');
                 dayElement.className = 'calendar-day';
                 
-                // FIXED: Only show events for days that belong to the current month
-                const isCurrentMonth = cellDate.getMonth() === month && cellDate.getFullYear() === year;
+                // FIXED: Only show events for days that belong to the current month using UTC
+                const isCurrentMonth = cellDate.getUTCMonth() === month && cellDate.getUTCFullYear() === year;
                 if (!isCurrentMonth) {
                     dayElement.classList.add('other-month');
                 }
@@ -1594,7 +1611,7 @@
                 
                 const dayNumber = document.createElement('div');
                 dayNumber.className = 'day-number';
-                dayNumber.textContent = cellDate.getDate();
+                dayNumber.textContent = cellDate.getUTCDate();
                 dayElement.appendChild(dayNumber);
                 
                 // Show events only for days in the current month
@@ -1606,7 +1623,7 @@
                     dayEvents = visibleEvents.get(dateKey) || [];
                     
                     // Debug for the first day of the month
-                    if (cellDate.getDate() === 1 && cellDate.getMonth() === month) {
+                    if (cellDate.getUTCDate() === 1 && cellDate.getUTCMonth() === month) {
                         console.log(' - Day 1 Debug:');
                         console.log('🔍   - Cell Date:', cellDate);
                         console.log('🔍   - Date Key:', dateKey);
@@ -2246,16 +2263,23 @@
             filterEvents();
         }
 
-        // Add this helper function
+        // Add this helper function for timezone-safe date handling
         function getDateKey(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
 
-        // Then use it in your calendar rendering
-        const dateKey = getDateKey(cellDate);
+        // Helper function to create timezone-safe date objects
+        function createUTCDate(year, month, day) {
+            return new Date(Date.UTC(year, month, day));
+        }
+
+        // Helper function to check if a date belongs to a specific month (timezone-safe)
+        function isDateInMonth(date, targetYear, targetMonth) {
+            return date.getUTCFullYear() === targetYear && date.getUTCMonth() === targetMonth;
+        }
     </script>
 </body>
 </html>
