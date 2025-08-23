@@ -91,6 +91,72 @@
             padding: 0 1rem;
         }
         
+        /* Description Section */
+        .description-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 2.5rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        
+        .description-title {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .description-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .description-features {
+            margin-top: 2rem;
+        }
+        
+        .feature-item {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .feature-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .feature-item h4 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 1.2rem;
+        }
+        
+        .feature-item p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+        
         /* Filter Section */
         .filter-section {
             background: white;
@@ -622,6 +688,48 @@
 
     <main id="main-content" class="container-fluid main-container" role="main">
         <h1 class="sr-only">Toronto Public Library Programs Calendar</h1>
+        
+        <!-- Website Description Section -->
+        <div class="description-section">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h2 class="description-title">
+                        <i class="fas fa-calendar-alt me-3"></i>
+                        Discover & Plan Your Library Activities
+                    </h2>
+                    <p class="description-text">
+                        Welcome to the Toronto Public Library Programs Calendar - your comprehensive tool for discovering and planning library events across the city. 
+                        Browse programs in an intuitive calendar view to easily plan your week, or explore library locations on our interactive map to find events near you. 
+                        With real-time distance calculations and detailed program information, you can make informed decisions about which library activities to attend.
+                    </p>
+                    <div class="description-features">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="feature-item">
+                                    <i class="fas fa-calendar-week feature-icon"></i>
+                                    <h4>Calendar View</h4>
+                                    <p>Browse programs in a monthly calendar format for easy weekly planning</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-item">
+                                    <i class="fas fa-map-marked-alt feature-icon"></i>
+                                    <h4>Interactive Map</h4>
+                                    <p>Find library locations and see how far they are from your current location</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-item">
+                                    <i class="fas fa-search feature-icon"></i>
+                                    <h4>Smart Filtering</h4>
+                                    <p>Filter by library, category, age group, and distance to find exactly what you need</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <!-- Status Bar -->
         <div class="status-bar" id="statusBar" style="display: none;">
