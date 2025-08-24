@@ -57,12 +57,11 @@ app.get('/sitemap.xml', async (req, res) => {
   try {
     res.header('Content-Type', 'application/xml');
 
-    const sitemap = new SitemapStream({ hostname: 'https://your-domain.com' });
+    const sitemap = new SitemapStream({ hostname: 'https://tplevents.ca' });
 
     // Add your main pages
     sitemap.write({ url: '/', changefreq: 'daily', priority: 1.0 });
-    sitemap.write({ url: '/calendar', changefreq: 'daily', priority: 0.9 });
-    sitemap.write({ url: '/map', changefreq: 'daily', priority: 0.9 });
+    sitemap.write({ url: '/health', changefreq: 'weekly', priority: 0.5 });
     
     sitemap.end();
 
@@ -97,6 +96,21 @@ app.get('/', (req, res) => {
       <p><a href="/api/events">API Events</a></p>
     `);
   }
+});
+
+// 404 handler - add this before the global error handler
+app.use((req, res, next) => {
+  if (req.accepts('html')) {
+    res.status(404).render('index'); // Fallback to main page
+    return;
+  }
+  
+  if (req.accepts('json')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  
+  res.status(404).type('txt').send('Not found');
 });
 
 // Global error handler
