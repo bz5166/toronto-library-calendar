@@ -1760,6 +1760,7 @@
         // Global Variables
         let allEvents = [];
         let filteredEvents = [];
+        let newProgramsEvents = []; // Store new programs events for filtering
         let currentDate = getDateInEST();
         let map = null;
         let libraryMarkers = [];
@@ -2068,15 +2069,23 @@
             const selectedDate = document.getElementById('dateFilter').value;
             const distance = document.getElementById('distanceFilter').value;
 
-            // Create filter state string for caching (using sorted arrays for consistency)
-            const filterState = `${search}|${libraries.sort().join(',')}|${categories.sort().join(',')}|${ageGroups.sort().join(',')}|${selectedDate}|${distance}`;
+            // Check if we're in the new programs view
+            const isNewProgramsView = document.getElementById('newProgramsContainer') && 
+                                      document.getElementById('newProgramsContainer').style.display !== 'none';
             
-            // Check cache first
-            if (filteredEventsCache.has(filterState) && filterState === lastFilterState) {
+            // Use new programs events if in new programs view, otherwise use allEvents
+            const sourceEvents = isNewProgramsView ? newProgramsEvents : allEvents;
+
+            // Create filter state string for caching (using sorted arrays for consistency)
+            const filterState = `${search}|${libraries.sort().join(',')}|${categories.sort().join(',')}|${ageGroups.sort().join(',')}|${selectedDate}|${distance}|${isNewProgramsView ? 'new' : 'all'}`;
+            
+            // Check cache first (but not for new programs view as it changes with days selector)
+            if (!isNewProgramsView && filteredEventsCache.has(filterState) && filterState === lastFilterState) {
                 console.log('✅ Using cached filtered results');
                 filteredEvents = filteredEventsCache.get(filterState);
                 updateEventCount();
                 updateStatusBar();
+                updateActiveFiltersDisplay();
                 renderCalendar();
                 updateMapMarkers();
                 return;
@@ -2095,7 +2104,7 @@
             }
 
             // Use more efficient filtering with early exit
-            filteredEvents = allEvents.filter(event => {
+            const filtered = sourceEvents.filter(event => {
                 // Early exit for search filter (most expensive)
                 if (search) {
                     const searchableText = `${event.title || ''} ${event.description || ''} ${event.library || ''} ${event.category || ''}`.toLowerCase();
@@ -2114,7 +2123,9 @@
                 // Early exit for date filter
                 if (selectedDate) {
                     if (!event.startDate) return false;
-                    const eventDate = event.startDate.split('T')[0];
+                    const eventDate = typeof event.startDate === 'string' 
+                        ? event.startDate.split('T')[0] 
+                        : new Date(event.startDate).toISOString().split('T')[0];
                     if (eventDate !== selectedDate) return false;
                 }
 
@@ -2138,21 +2149,34 @@
                 return true;
             });
 
-            // Cache the result
-            filteredEventsCache.set(filterState, filteredEvents);
-            lastFilterState = filterState;
+            // Update the appropriate events array
+            if (isNewProgramsView) {
+                // For new programs view, update the display directly
+                const daysSelector = document.getElementById('daysSelector');
+                const days = daysSelector ? parseInt(daysSelector.value, 10) : 28;
+                displayNewPrograms(filtered, days);
+                // Update active filters display for new programs view
+                updateActiveFiltersDisplay();
+            } else {
+                // For calendar/map view, update filteredEvents
+                filteredEvents = filtered;
+                
+                // Cache the result
+                filteredEventsCache.set(filterState, filteredEvents);
+                lastFilterState = filterState;
 
-            // Clear cache if it gets too large
-            if (filteredEventsCache.size > 50) {
-                const firstKey = filteredEventsCache.keys().next().value;
-                filteredEventsCache.delete(firstKey);
+                // Clear cache if it gets too large
+                if (filteredEventsCache.size > 50) {
+                    const firstKey = filteredEventsCache.keys().next().value;
+                    filteredEventsCache.delete(firstKey);
+                }
+
+                updateEventCount();
+                updateStatusBar();
+                updateActiveFiltersDisplay();
+                renderCalendar();
+                updateMapMarkers();
             }
-
-            updateEventCount();
-            updateStatusBar();
-            updateActiveFiltersDisplay();
-            renderCalendar();
-            updateMapMarkers();
         }
 
         // Load programs from API
@@ -2191,11 +2215,17 @@
 
         // Load filter options
         function loadFilterOptions() {
-            if (allEvents.length === 0) return;
+            // Check if we're in new programs view
+            const isNewProgramsView = document.getElementById('newProgramsContainer') && 
+                                      document.getElementById('newProgramsContainer').style.display !== 'none';
+            
+            const sourceEvents = isNewProgramsView ? newProgramsEvents : allEvents;
+            
+            if (sourceEvents.length === 0) return;
 
-            const libraries = [...new Set(allEvents.map(event => event.library).filter(Boolean))].sort();
-            const categories = [...new Set(allEvents.map(event => event.category).filter(Boolean))].sort();
-            const ageGroups = [...new Set(allEvents.map(event => event.ageGroup).filter(Boolean))].sort();
+            const libraries = [...new Set(sourceEvents.map(event => event.library).filter(Boolean))].sort();
+            const categories = [...new Set(sourceEvents.map(event => event.category).filter(Boolean))].sort();
+            const ageGroups = [...new Set(sourceEvents.map(event => event.ageGroup).filter(Boolean))].sort();
 
             populateFilterGroup('libraryFilterBody', libraries, 'library');
             populateFilterGroup('categoryFilterBody', categories, 'category');
@@ -2207,11 +2237,16 @@
             const container = document.getElementById(containerId);
             if (!container) return;
             
+            // Check if we're in new programs view
+            const isNewProgramsView = document.getElementById('newProgramsContainer') && 
+                                      document.getElementById('newProgramsContainer').style.display !== 'none';
+            const sourceEvents = isNewProgramsView ? newProgramsEvents : allEvents;
+            
             container.innerHTML = '';
             
             options.forEach(option => {
                 // Count how many events match this option
-                const count = allEvents.filter(event => {
+                const count = sourceEvents.filter(event => {
                     if (filterType === 'library') return event.library === option;
                     if (filterType === 'category') return event.category === option;
                     if (filterType === 'ageGroup') return event.ageGroup === option;
@@ -2249,14 +2284,57 @@
             const libraries = getSelectedFilterValues('library');
             const categories = getSelectedFilterValues('category');
             const ageGroups = getSelectedFilterValues('ageGroup');
+            const search = document.getElementById('searchInput') ? document.getElementById('searchInput').value.trim() : '';
+            const selectedDate = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : '';
+            const distance = document.getElementById('distanceFilter') ? document.getElementById('distanceFilter').value : '';
             
             // Clear the display
             display.innerHTML = '';
             
+            // Check if any filters are selected
+            const hasFilters = libraries.length > 0 || categories.length > 0 || ageGroups.length > 0 || 
+                              search || selectedDate || distance;
+            
             // If no filters are selected, show message
-            if (libraries.length === 0 && categories.length === 0 && ageGroups.length === 0) {
+            if (!hasFilters) {
                 display.innerHTML = '<small class="text-muted">No filters selected</small>';
                 return;
+            }
+            
+            // Add search filter
+            if (search) {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Search:</span>
+                    <span class="filter-value">${escapeHtml(search)}</span>
+                    <span class="filter-close" data-filter-type="search" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
+            }
+            
+            // Add date filter
+            if (selectedDate) {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Date:</span>
+                    <span class="filter-value">${escapeHtml(selectedDate)}</span>
+                    <span class="filter-close" data-filter-type="date" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
+            }
+            
+            // Add distance filter
+            if (distance) {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Distance:</span>
+                    <span class="filter-value">${escapeHtml(distance)} km</span>
+                    <span class="filter-close" data-filter-type="distance" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
             }
             
             // Add library filters
@@ -2302,14 +2380,25 @@
                     const filterType = this.getAttribute('data-filter-type');
                     const value = this.getAttribute('data-value');
                     
-                    // Find and uncheck the corresponding checkbox
-                    // Need to escape special characters in value for CSS selector
-                    const escapedValue = value.replace(/"/g, '\\"').replace(/'/g, "\\'");
-                    const checkbox = document.querySelector(`input[type="checkbox"][data-filter-type="${filterType}"][value="${escapedValue}"]`);
-                    if (checkbox) {
-                        checkbox.checked = false;
-                        filterEvents();
+                    // Handle different filter types
+                    if (filterType === 'search') {
+                        document.getElementById('searchInput').value = '';
+                    } else if (filterType === 'date') {
+                        document.getElementById('dateFilter').value = '';
+                    } else if (filterType === 'distance') {
+                        document.getElementById('distanceFilter').value = '';
+                    } else {
+                        // Handle checkbox filters (library, category, ageGroup)
+                        // Need to escape special characters in value for CSS selector
+                        const escapedValue = value.replace(/"/g, '\\"').replace(/'/g, "\\'");
+                        const checkbox = document.querySelector(`input[type="checkbox"][data-filter-type="${filterType}"][value="${escapedValue}"]`);
+                        if (checkbox) {
+                            checkbox.checked = false;
+                        }
                     }
+                    
+                    // Apply filters after removing one
+                    filterEvents();
                 });
             });
         }
@@ -2407,10 +2496,15 @@
             document.getElementById('mapContainer').style.display = 'none';
             document.getElementById('newProgramsContainer').style.display = 'block';
             
-            // Load new programs with default days (28)
-            const daysSelector = document.getElementById('daysSelector');
-            const days = daysSelector ? parseInt(daysSelector.value, 10) : 28;
-            loadNewPrograms(days);
+            // Load new programs with default days (28) if not already loaded
+            if (newProgramsEvents.length === 0) {
+                const daysSelector = document.getElementById('daysSelector');
+                const days = daysSelector ? parseInt(daysSelector.value, 10) : 28;
+                loadNewPrograms(days);
+            } else {
+                // If already loaded, just apply current filters
+                filterEvents();
+            }
         }
 
         // Load new programs from API
@@ -2431,7 +2525,12 @@
                 
                 if (data.success) {
                     console.log(`✅ Loaded ${data.events.length} new programs`);
-                    displayNewPrograms(data.events, days);
+                    // Store the events globally for filtering
+                    newProgramsEvents = data.events;
+                    // Load filter options based on new programs
+                    loadFilterOptionsForNewPrograms();
+                    // Apply current filters to the new programs
+                    filterEvents();
                 } else {
                     throw new Error(data.error || 'Failed to load new programs');
                 }
@@ -2443,18 +2542,51 @@
                 loadingEl.style.display = 'none';
             }
         }
+        
+        // Load filter options based on new programs events
+        function loadFilterOptionsForNewPrograms() {
+            if (newProgramsEvents.length === 0) return;
+
+            const libraries = [...new Set(newProgramsEvents.map(event => event.library).filter(Boolean))].sort();
+            const categories = [...new Set(newProgramsEvents.map(event => event.category).filter(Boolean))].sort();
+            const ageGroups = [...new Set(newProgramsEvents.map(event => event.ageGroup).filter(Boolean))].sort();
+
+            populateFilterGroup('libraryFilterBody', libraries, 'library');
+            populateFilterGroup('categoryFilterBody', categories, 'category');
+            populateFilterGroup('ageGroupFilterBody', ageGroups, 'ageGroup');
+        }
 
         // Display new programs in the list
         function displayNewPrograms(events, days) {
             const listEl = document.getElementById('newProgramsList');
             
             if (events.length === 0) {
-                listEl.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No programs were created or updated in the last ${days} day${days !== 1 ? 's' : ''}.
-                    </div>
-                `;
+                // Check if there are any filters applied
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const libraries = getSelectedFilterValues('library');
+                const categories = getSelectedFilterValues('category');
+                const ageGroups = getSelectedFilterValues('ageGroup');
+                const selectedDate = document.getElementById('dateFilter').value;
+                const distance = document.getElementById('distanceFilter').value;
+                
+                const hasFilters = search || libraries.length > 0 || categories.length > 0 || 
+                                  ageGroups.length > 0 || selectedDate || distance;
+                
+                if (hasFilters) {
+                    listEl.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No programs match your current filters. Try adjusting your search or filter criteria.
+                        </div>
+                    `;
+                } else {
+                    listEl.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No programs were created or updated in the last ${days} day${days !== 1 ? 's' : ''}.
+                        </div>
+                    `;
+                }
                 return;
             }
             
