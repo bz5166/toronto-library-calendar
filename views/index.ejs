@@ -2591,11 +2591,34 @@
             }
             
             listEl.innerHTML = events.map(event => {
-                const startDate = event.startDate ? new Date(event.startDate).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                }) : 'Date TBD';
+                // Format startDate correctly without timezone conversion issues
+                // Use the same approach as showEventDetails to ensure consistency
+                let startDate = 'Date TBD';
+                if (event.startDate) {
+                    if (typeof event.startDate === 'string') {
+                        // If it's a string like "2024-01-15", parse it correctly
+                        const dateStr = event.startDate.split('T')[0]; // Get just the date part
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                            // Parse as local date to avoid timezone issues
+                            const [year, month, day] = dateStr.split('-').map(Number);
+                            const date = new Date(year, month - 1, day); // month is 0-indexed
+                            startDate = date.toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            });
+                        } else {
+                            // Fallback to direct string display
+                            startDate = dateStr;
+                        }
+                    } else if (event.startDate instanceof Date) {
+                        startDate = event.startDate.toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        });
+                    }
+                }
                 
                 const lastUpdated = event.lastUpdated ? new Date(event.lastUpdated).toLocaleDateString('en-US', { 
                     year: 'numeric', 
@@ -3220,7 +3243,20 @@
 
         // Show program details in modal
         function showEventDetails(eventId) {
-            const event = allEvents.find(e => e.eventId === eventId);
+            // Check if we're in new programs view and search there first
+            const isNewProgramsView = document.getElementById('newProgramsContainer') && 
+                                      document.getElementById('newProgramsContainer').style.display !== 'none';
+            
+            let event = null;
+            if (isNewProgramsView && newProgramsEvents.length > 0) {
+                event = newProgramsEvents.find(e => e.eventId === eventId);
+            }
+            
+            // Fallback to allEvents if not found in newProgramsEvents
+            if (!event) {
+                event = allEvents.find(e => e.eventId === eventId);
+            }
+            
             if (!event) return;
 
             const eventUrl = getEventPageUrl(event);
