@@ -3,7 +3,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TPL Programs">
     
     <!-- SEO Meta Tags -->
     <title>Toronto Public Library Programs Calendar | Find Library Events & Activities</title>
@@ -75,6 +79,18 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--light-bg);
             color: #333;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        /* Prevent horizontal scroll on mobile */
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
         }
         
         .navbar {
@@ -85,6 +101,46 @@
         .navbar-brand {
             font-weight: bold;
             font-size: 1.4rem;
+        }
+        
+        /* Mobile navbar improvements */
+        @media (max-width: 991.98px) {
+            .navbar-nav {
+                margin-top: 1rem;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .navbar-nav .nav-link:last-child {
+                border-bottom: none;
+            }
+            
+            /* Hide status text on very small screens */
+            .navbar-text {
+                font-size: 0.85rem;
+            }
+        }
+        
+        @media (max-width: 575.98px) {
+            .navbar-text {
+                display: none; /* Hide status on very small screens to save space */
+            }
+            
+            .navbar-brand {
+                font-size: 1rem;
+            }
+        }
+        
+        .navbar-toggler {
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.5);
         }
         
         .main-container {
@@ -570,7 +626,212 @@
             color: var(--primary-color);
         }
         
-        /* Mobile responsiveness */
+        /* Mobile responsiveness - Enhanced */
+        
+        /* Touch-friendly minimum sizes */
+        .btn, button, .form-control, .form-select, input, select {
+            min-height: 44px; /* iOS recommended touch target */
+            font-size: 16px; /* Prevents zoom on iOS */
+        }
+        
+        /* Small phones (up to 576px) */
+        @media (max-width: 575.98px) {
+            .main-container {
+                padding: 0 0.5rem;
+                margin-top: 1rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .description-section {
+                padding: 1.5rem 1rem;
+            }
+            
+            .description-title {
+                font-size: 1.5rem;
+            }
+            
+            .description-text {
+                font-size: 0.95rem;
+            }
+            
+            .filter-section {
+                padding: 1rem 0.75rem;
+            }
+            
+            .filter-title {
+                font-size: 1.1rem;
+                padding: 0.75rem;
+            }
+            
+            .filter-section .row > div {
+                margin-bottom: 0.75rem;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .view-toggle {
+                padding: 0.75rem;
+            }
+            
+            .view-toggle .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+            
+            .calendar-nav {
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+            
+            .calendar-nav h2 {
+                font-size: 1.25rem;
+                order: -1;
+                text-align: center;
+            }
+            
+            .nav-buttons {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                gap: 0.5rem;
+            }
+            
+            .nav-buttons .btn {
+                flex: 1;
+                padding: 0.5rem;
+                font-size: 0.85rem;
+            }
+            
+            .calendar-day {
+                height: 80px;
+                padding: 0.25rem;
+                min-height: 80px;
+            }
+            
+            .day-number {
+                font-size: 0.75rem;
+                margin-bottom: 0.15rem;
+                font-weight: 600;
+            }
+            
+            .event-tile {
+                font-size: 0.5rem;
+                padding: 0.1rem 0.15rem;
+                margin-bottom: 0.1rem;
+                line-height: 1.2;
+            }
+            
+            .more-events {
+                font-size: 0.45rem;
+                padding: 0.1rem 0.15rem;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 0.75rem;
+            }
+            
+            .status-item {
+                font-size: 0.85rem;
+            }
+            
+            #map {
+                height: 350px;
+                border-radius: 8px;
+            }
+            
+            .day-events-modal .modal-dialog {
+                max-width: 95%;
+                margin: 0.5rem auto;
+            }
+            
+            .day-events-modal .modal-content {
+                border-radius: 12px;
+            }
+            
+            .day-events-modal .modal-header {
+                padding: 1rem;
+            }
+            
+            .day-events-modal .modal-body {
+                padding: 1rem;
+            }
+            
+            .event-card {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            .event-card h5 {
+                font-size: 1rem;
+            }
+            
+            .map-filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+            
+            .map-filter-controls .form-control,
+            .map-filter-controls .form-select {
+                width: 100%;
+            }
+            
+            .library-popup {
+                max-width: 280px;
+                font-size: 0.9rem;
+            }
+            
+            .popup-event {
+                padding: 0.5rem 0;
+                font-size: 0.85rem;
+            }
+            
+            .view-all-programs-btn {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Tablets and small screens (576px to 768px) */
+        @media (min-width: 576px) and (max-width: 768px) {
+            .main-container {
+                padding: 0 1rem;
+            }
+            
+            .calendar-day {
+                height: 100px;
+                padding: 0.3rem;
+            }
+            
+            .event-tile {
+                font-size: 0.6rem;
+                padding: 0.1rem 0.25rem;
+            }
+            
+            .more-events {
+                font-size: 0.55rem;
+            }
+            
+            #map {
+                height: 400px;
+            }
+            
+            .filter-section .row > div {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* Standard mobile (up to 768px) */
         @media (max-width: 768px) {
             .calendar-nav {
                 flex-direction: column;
@@ -602,7 +863,7 @@
             }
             
             #map {
-                height: 300px;
+                height: 350px;
             }
             
             .day-events-modal .modal-dialog {
@@ -618,6 +879,103 @@
             
             .map-filter-controls .form-control {
                 width: 100%;
+            }
+            
+            /* Stack filter columns on mobile */
+            .filter-section .row > div {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            
+            /* Improve button spacing */
+            .btn-group {
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+            }
+            
+            /* Better modal sizing */
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+            
+            /* Improve event cards */
+            .event-card {
+                margin-bottom: 1rem;
+            }
+            
+            /* Better popup sizing */
+            .library-popup {
+                max-width: 90vw;
+            }
+            
+            /* Improve notification positioning */
+            .alert.position-fixed {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+        
+        /* Landscape orientation on mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            #map {
+                height: 250px;
+            }
+            
+            .calendar-day {
+                height: 70px;
+            }
+        }
+        
+        /* Prevent text size adjustment on iOS */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            select,
+            textarea,
+            input[type="text"],
+            input[type="password"],
+            input[type="datetime"],
+            input[type="datetime-local"],
+            input[type="date"],
+            input[type="month"],
+            input[type="time"],
+            input[type="week"],
+            input[type="number"],
+            input[type="email"],
+            input[type="url"],
+            input[type="search"],
+            input[type="tel"],
+            input[type="color"] {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            /* Improve touch targets */
+            .btn, button {
+                padding: 0.75rem 1rem;
+            }
+            
+            /* Remove hover effects on touch devices */
+            .calendar-day:hover {
+                background: #fff;
+                box-shadow: none;
+            }
+            
+            .event-tile:hover {
+                background: var(--primary-color);
+            }
+            
+            /* Better tap feedback */
+            .btn:active,
+            button:active,
+            .calendar-day:active {
+                transform: scale(0.98);
+                transition: transform 0.1s;
             }
         }
         
@@ -662,6 +1020,77 @@
         .skip-link:focus {
             top: 6px;
         }
+        
+        /* Contact Form Styles */
+        .contact-modal .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .contact-modal .modal-header {
+            background: linear-gradient(135deg, var(--primary-color), #004d99);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            border-bottom: none;
+        }
+        
+        .contact-modal .modal-header .btn-close {
+            filter: invert(1);
+        }
+        
+        .contact-modal .form-label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .contact-modal .form-control,
+        .contact-modal .form-select {
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+        }
+        
+        .contact-modal .form-control:focus,
+        .contact-modal .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        }
+        
+        .contact-modal textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .contact-modal .btn-submit {
+            background: var(--primary-color);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+        }
+        
+        .contact-modal .btn-submit:hover {
+            background: #0056b3;
+        }
+        
+        .contact-modal .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .contact-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .contact-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -679,10 +1108,14 @@
                     <i class="fas fa-clock me-1" aria-hidden="true"></i>
                     Loading programs...
                 </span>
-                <span class="navbar-text" id="locationStatus" aria-live="polite">
+                <span class="navbar-text me-3" id="locationStatus" aria-live="polite">
                     <i class="fas fa-map-marker-alt me-1" aria-hidden="true"></i>
                     <span id="locationStatusText">Location not set</span>
                 </span>
+                <a href="#" class="contact-link" data-bs-toggle="modal" data-bs-target="#contactModal" aria-label="Contact us for feedback">
+                    <i class="fas fa-envelope me-1" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline">Feedback</span>
+                </a>
             </div>
         </div>
     </nav>
@@ -760,7 +1193,13 @@
                     <input type="text" class="form-control" id="searchInput" placeholder="Search programs...">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Library</label>
+                    <label class="form-label">
+                        Library
+                        <span id="libraryFilterBadge" class="badge bg-primary ms-2" style="display: none;">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <span id="libraryFilterBadgeText"></span>
+                        </span>
+                    </label>
                     <select class="form-select" id="libraryFilter">
                         <option value="">All Libraries</option>
                     </select>
@@ -907,6 +1346,59 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div class="modal fade contact-modal" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="contactModalLabel">
+                        <i class="fas fa-envelope me-2"></i>
+                        Share Your Feedback
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4">Have a suggestion for improvement? We'd love to hear from you!</p>
+                    <form id="contactForm">
+                        <div class="mb-3">
+                            <label for="contactName" class="form-label">Your Name <small class="text-muted">(optional)</small></label>
+                            <input type="text" class="form-control" id="contactName" name="name" minlength="2" maxlength="100" placeholder="Enter your name (optional)">
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactEmail" class="form-label">Your Email <small class="text-muted">(optional)</small></label>
+                            <input type="email" class="form-control" id="contactEmail" name="email" placeholder="your.email@example.com (optional)">
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactSubject" class="form-label">Subject</label>
+                            <select class="form-select" id="contactSubject" name="subject">
+                                <option value="Feature Request">Feature Request</option>
+                                <option value="Bug Report">Bug Report</option>
+                                <option value="Improvement Suggestion">Improvement Suggestion</option>
+                                <option value="General Feedback">General Feedback</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactMessage" class="form-label">Your Message <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="contactMessage" name="message" required minlength="10" maxlength="2000" rows="5" placeholder="Please describe your suggestion or feedback in detail..."></textarea>
+                            <small class="form-text text-muted">
+                                <span id="charCount">0</span>/2000 characters
+                            </small>
+                        </div>
+                        <div id="contactFormAlert" class="alert d-none" role="alert"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="contactForm" class="btn btn-primary btn-submit" id="contactSubmitBtn">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Send Feedback
+                    </button>
                 </div>
             </div>
         </div>
@@ -1127,12 +1619,6 @@
             
             console.log('📍 Nearest libraries:', nearestLibraries);
             
-            // Only highlight nearest libraries if no distance filter is active
-            const distanceFilter = document.getElementById('distanceFilter').value;
-            if (!distanceFilter) {
-                highlightNearestLibraries(nearestLibraries);
-            }
-            
             // Create popup content with nearest libraries
             let popupContent = '<div><strong>📚 Nearest Libraries:</strong><br>';
             nearestLibraries.forEach((lib, index) => {
@@ -1151,56 +1637,6 @@
             }
         }
 
-        // New function to highlight nearest libraries
-        function highlightNearestLibraries(nearestLibraries) {
-            // Remove existing highlights
-            if (window.nearestLibraryMarkers) {
-                window.nearestLibraryMarkers.forEach(marker => {
-                    if (map.hasLayer(marker)) {
-                        map.removeLayer(marker);
-                    }
-                });
-            }
-            
-            window.nearestLibraryMarkers = [];
-            
-            // Only add highlights if no distance filter is active
-            const distanceFilter = document.getElementById('distanceFilter').value;
-            if (distanceFilter) {
-                console.log('📍 Distance filter active, skipping library highlights');
-                return;
-            }
-            
-            // Add highlighted markers for nearest libraries
-            nearestLibraries.forEach((lib, index) => {
-                const highlightIcon = L.icon({
-                    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#28a745" width="35" height="35">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                        </svg>
-                    `),
-                    iconSize: [35, 35],
-                    iconAnchor: [17, 35],
-                    popupAnchor: [0, -35]
-                });
-                
-                const marker = L.marker([lib.coords.lat, lib.coords.lng], { 
-                    icon: highlightIcon,
-                    zIndexOffset: 500
-                });
-                
-                marker.bindPopup(`
-                    <div style="text-align: center;">
-                        <strong>🏆 #${index + 1} Nearest</strong><br>
-                        <strong>${lib.name}</strong><br>
-                        <small>📍 ${lib.distance.toFixed(1)} km away</small>
-                    </div>
-                `);
-                
-                marker.addTo(map);
-                window.nearestLibraryMarkers.push(marker);
-            });
-        }
 
         // Optimized distance calculation with caching
         function calculateDistance(lat1, lng1, lat2, lng2) {
@@ -1235,7 +1671,14 @@
         function setupEventListeners() {
             // Use event delegation for better performance
             document.addEventListener('change', function(e) {
-                if (e.target.matches('#libraryFilter, #categoryFilter, #ageGroupFilter, #distanceFilter, #dateFilter')) {
+                if (e.target.matches('#libraryFilter')) {
+                    // Update badge when library filter changes
+                    const libraryFilter = document.getElementById('libraryFilter');
+                    const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
+                    const selectedLibrary = libraryFilter.value ? selectedOption.text : '';
+                    updateLibraryFilterBadge(selectedLibrary);
+                    filterEvents();
+                } else if (e.target.matches('#categoryFilter, #ageGroupFilter, #distanceFilter, #dateFilter')) {
                     filterEvents();
                 }
             });
@@ -1258,6 +1701,17 @@
                 } else if (e.target.matches('#todayBtn')) {
                 currentDate = new Date();
                 renderCalendar();
+                } else if (e.target.closest('.view-all-programs-btn')) {
+                    // Handle "View All Programs" button click
+                    const button = e.target.closest('.view-all-programs-btn');
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const libraryNameAttr = button.getAttribute('data-library-name');
+                    if (libraryNameAttr) {
+                        // Decode HTML entities
+                        const libraryName = libraryNameAttr.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                        viewAllProgramsForLibrary(libraryName);
+                    }
                 }
             });
 
@@ -1366,6 +1820,16 @@
             updateStatusBar();
             renderCalendar();
             updateMapMarkers();
+            
+            // Update library filter badge if a library is selected
+            const libraryFilter = document.getElementById('libraryFilter');
+            if (libraryFilter && libraryFilter.value) {
+                const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
+                const selectedLibrary = selectedOption ? selectedOption.text : '';
+                updateLibraryFilterBadge(selectedLibrary);
+            } else {
+                updateLibraryFilterBadge('');
+            }
         }
 
         // Load programs from API
@@ -1439,6 +1903,10 @@
             document.getElementById('ageGroupFilter').value = '';
             document.getElementById('dateFilter').value = ''; // Clear date filter too
             document.getElementById('distanceFilter').value = ''; // Clear distance filter too
+            
+            // Update badge to hide it
+            updateLibraryFilterBadge('');
+            
             filterEvents();
         }
 
@@ -1475,6 +1943,34 @@
                 initializeMap();
             }
             updateMapMarkers();
+            
+            // Automatically request location when switching to map view
+            // Check if we already have a stored location
+            const storedLocation = localStorage.getItem('userLocation');
+            if (storedLocation) {
+                try {
+                    const location = JSON.parse(storedLocation);
+                    const age = Date.now() - location.timestamp;
+                    // Use stored location if it's less than 30 minutes old
+                    if (age < 30 * 60 * 1000) {
+                        console.log('📍 Using stored location for map view');
+                        updateMapWithUserLocation(location.lat, location.lng, location.accuracy || 100);
+                        userLocationCache = location;
+                    } else {
+                        // Location is old, request new one
+                        console.log('📍 Stored location is old, requesting new location');
+                        findCurrentLocation();
+                    }
+                } catch (error) {
+                    console.error('Error parsing stored location:', error);
+                    // Request new location if stored one is invalid
+                    findCurrentLocation();
+                }
+            } else {
+                // No stored location, request it
+                console.log('📍 No stored location, requesting location for map view');
+                findCurrentLocation();
+            }
         }
 
         // Initialize map
@@ -1500,18 +1996,8 @@
             // Batch DOM operations
             const fragment = document.createDocumentFragment();
             
-            // Clear existing markers and highlights
+            // Clear existing markers
             markersLayer.clearLayers();
-            
-            // Remove any existing nearest library highlight markers
-            if (window.nearestLibraryMarkers) {
-                window.nearestLibraryMarkers.forEach(marker => {
-                    if (map.hasLayer(marker)) {
-                        map.removeLayer(marker);
-                    }
-                });
-                window.nearestLibraryMarkers = [];
-            }
             
             const eventsData = getFilteredEvents();
             
@@ -1563,7 +2049,11 @@
                 
         // Helper function to create library marker
         function createLibraryMarker(coordinates, libraryName, events) {
-                const marker = L.marker(coordinates, { icon: pinIcon });
+                // Set higher z-index so library markers are clickable above location marker
+                const marker = L.marker(coordinates, { 
+                    icon: pinIcon,
+                    zIndexOffset: 100  // Higher than location marker so it's clickable
+                });
                 
                 const locationData = Object.values(libraryCoordinates).find(loc =>
                     loc.lat === coordinates[0] && loc.lng === coordinates[1]
@@ -1572,6 +2062,31 @@
             // Pre-build popup content more efficiently
             const popupContent = buildPopupContent(libraryName, events, locationData);
             marker.bindPopup(popupContent);
+            
+            // Attach event listener when popup opens
+            marker.on('popupopen', function() {
+                // Use setTimeout to ensure popup DOM is fully rendered
+                setTimeout(function() {
+                    const popup = marker.getPopup();
+                    const popupElement = popup ? popup.getElement() : null;
+                    if (popupElement) {
+                        const viewAllButton = popupElement.querySelector('.view-all-programs-btn');
+                        if (viewAllButton && !viewAllButton.hasAttribute('data-listener-attached')) {
+                            viewAllButton.setAttribute('data-listener-attached', 'true');
+                            viewAllButton.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const libraryNameAttr = this.getAttribute('data-library-name');
+                                if (libraryNameAttr) {
+                                    // Decode HTML entities
+                                    const libraryName = libraryNameAttr.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                                    viewAllProgramsForLibrary(libraryName);
+                                }
+                            });
+                        }
+                    }
+                }, 10);
+            });
             
             return marker;
         }
@@ -1594,18 +2109,145 @@
                     `;
             }).join('');
             
+            // Escape library name for use in JavaScript (using JSON.stringify for proper escaping)
+            const escapedLibraryName = JSON.stringify(libraryName);
+            
             return `
                 <div class="library-popup">
                     <h3>${libraryName}</h3>
-                                            <p><strong>${events.length} programs</strong></p>
+                    <p><strong>${events.length} programs</strong></p>
                     ${locationData?.address ? `<p>📍 ${locationData.address}</p>` : ''}
                     ${locationData?.phone ? `<p>📞 ${locationData.phone}</p>` : ''}
                     <div class="event-list">
                         ${eventList}
                         ${events.length > 5 ? `<div class="popup-event">...and ${events.length - 5} more programs</div>` : ''}
                     </div>
+                    ${events.length > 5 ? `
+                        <div style="margin-top: 10px; text-align: center;">
+                            <button class="view-all-programs-btn btn btn-sm btn-primary" 
+                                    data-library-name="${libraryName.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"
+                                    style="width: 100%; cursor: pointer;">
+                                View All ${events.length} Programs
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
+        }
+
+        // Function to view all programs for a specific library (make it globally accessible)
+        function viewAllProgramsForLibrary(libraryName) {
+            console.log('🔍 viewAllProgramsForLibrary called with:', libraryName);
+            // Close any open popups
+            if (map) {
+                map.closePopup();
+            }
+            
+            // Set the library filter
+            const libraryFilter = document.getElementById('libraryFilter');
+            if (libraryFilter) {
+                // Find the option that matches the library name (case-insensitive)
+                const options = libraryFilter.options;
+                let found = false;
+                for (let i = 0; i < options.length; i++) {
+                    const optionText = options[i].text.trim();
+                    const optionValue = options[i].value.trim();
+                    const searchName = libraryName.trim();
+                    
+                    // Try exact match first
+                    if (optionText === searchName || optionValue === searchName) {
+                        libraryFilter.value = optionValue;
+                        found = true;
+                        break;
+                    }
+                    // Try case-insensitive match
+                    if (optionText.toLowerCase() === searchName.toLowerCase() || 
+                        optionValue.toLowerCase() === searchName.toLowerCase()) {
+                        libraryFilter.value = optionValue;
+                        found = true;
+                        break;
+                    }
+                }
+                // If no match found, try setting the value directly (might work if library name matches exactly)
+                if (!found) {
+                    libraryFilter.value = libraryName;
+                }
+            }
+            
+            // Select the calendar radio button
+            const calendarRadio = document.getElementById('calendarView');
+            if (calendarRadio) {
+                calendarRadio.checked = true;
+            }
+            
+            // Update the library filter badge to show selection
+            updateLibraryFilterBadge(libraryName);
+            
+            // Show notification
+            showFilterNotification(`Showing all programs for ${libraryName}`);
+            
+            // Switch to calendar view
+            showCalendarView();
+            
+            // Trigger filter to apply the library filter
+            filterEvents();
+            
+            // Scroll to calendar view
+            document.getElementById('calendarContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Function to update the library filter badge
+        function updateLibraryFilterBadge(libraryName) {
+            const badge = document.getElementById('libraryFilterBadge');
+            const badgeText = document.getElementById('libraryFilterBadgeText');
+            const libraryFilter = document.getElementById('libraryFilter');
+            
+            if (badge && badgeText && libraryFilter) {
+                if (libraryName && libraryFilter.value) {
+                    // Show badge with selected library name
+                    badgeText.textContent = libraryName;
+                    badge.style.display = 'inline-block';
+                    // Add visual highlight to the select
+                    libraryFilter.classList.add('border-primary');
+                    libraryFilter.style.borderWidth = '2px';
+                } else {
+                    // Hide badge when no filter is selected
+                    badge.style.display = 'none';
+                    libraryFilter.classList.remove('border-primary');
+                    libraryFilter.style.borderWidth = '';
+                }
+            }
+        }
+
+        // Function to show filter notification
+        function showFilterNotification(message) {
+            // Escape HTML to prevent XSS
+            const escapedMessage = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            notification.innerHTML = `
+                <i class="fas fa-filter me-2"></i>
+                <strong>Filter Applied:</strong><br>
+                ${escapedMessage}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.transition = 'opacity 0.3s';
+                    notification.style.opacity = '0';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 4000);
         }
 
         // Add this debugging function at the top of your script section
@@ -1699,7 +2341,14 @@
             const weeksNeeded = Math.ceil(totalDays / 7);
             
             // Add calendar days
-            const currentDateStr = new Date().toDateString();
+            // Get today's date at local midnight for accurate comparison
+            const now = new Date();
+            const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            const todayYear = todayAtMidnight.getFullYear();
+            const todayMonth = todayAtMidnight.getMonth();
+            const todayDay = todayAtMidnight.getDate();
+            
+            console.log('🔍 Today (local midnight):', `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`);
             
             for (let i = 0; i < weeksNeeded * 7; i++) {
                 const cellDate = new Date(startDate);
@@ -1714,8 +2363,24 @@
                     dayElement.classList.add('other-month');
                 }
                 
-                if (cellDate.toDateString() === currentDateStr) {
+                // Get local date components from cellDate for accurate comparison
+                // cellDate was created with UTC, but we need its local representation
+                const cellYear = cellDate.getFullYear();
+                const cellMonth = cellDate.getMonth();
+                const cellDay = cellDate.getDate();
+                
+                // Debug first few days to verify accuracy
+                if (i < 3) {
+                    const cellUTCYear = cellDate.getUTCFullYear();
+                    const cellUTCMonth = cellDate.getUTCMonth();
+                    const cellUTCDay = cellDate.getUTCDate();
+                    console.log(`🔍 Cell ${i}: UTC (${cellUTCYear}-${cellUTCMonth+1}-${cellUTCDay}) -> Local (${cellYear}-${cellMonth+1}-${cellDay}), Today (${todayYear}-${todayMonth+1}-${todayDay})`);
+                }
+                
+                // Compare year, month, and day components
+                if (cellYear === todayYear && cellMonth === todayMonth && cellDay === todayDay) {
                     dayElement.classList.add('today');
+                    console.log('✅ Today highlighted correctly on cell:', i, `Date: ${cellYear}-${cellMonth+1}-${cellDay}`);
                 }
                 
                 const dayNumber = document.createElement('div');
@@ -2073,10 +2738,11 @@
                 }
             }
             
-            // Add current location marker
+            // Add current location marker with lower z-index so library markers are on top
+            // Use negative z-index so library markers (z-index 100) are clickable above it
             currentLocationMarker = L.marker([lat, lng], { 
                 icon: currentLocationIcon,
-                zIndexOffset: 1000
+                zIndexOffset: -100  // Lower than library markers so they're clickable
             });
             
             currentLocationMarker.bindPopup(`
@@ -2087,8 +2753,10 @@
                         Find Nearest Libraries
                     </button>
                 </div>
-            `).openPopup();
+            `);
             
+            // Don't auto-open popup to avoid blocking library markers
+            // User can click on the location marker if they want to see it
             currentLocationMarker.addTo(map);
             
             // Center map on current location
@@ -2100,7 +2768,8 @@
                 fillColor: '#4285f4',
                 fillOpacity: 0.1,
                 color: '#4285f4',
-                weight: 1
+                weight: 1,
+                interactive: false  // Make circle non-interactive so it doesn't block clicks
             }).addTo(map);
             
             currentLocationMarker.accuracyCircle = accuracyCircle;
@@ -2289,7 +2958,14 @@
         function setupEventListeners() {
             // Use event delegation for filter changes
             document.addEventListener('change', function(e) {
-                if (e.target.matches('#libraryFilter, #categoryFilter, #ageGroupFilter, #dateFilter')) {
+                if (e.target.matches('#libraryFilter')) {
+                    // Update badge when library filter changes
+                    const libraryFilter = document.getElementById('libraryFilter');
+                    const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
+                    const selectedLibrary = libraryFilter.value ? selectedOption.text : '';
+                    updateLibraryFilterBadge(selectedLibrary);
+                    filterEvents();
+                } else if (e.target.matches('#categoryFilter, #ageGroupFilter, #dateFilter')) {
                     filterEvents();
                 } else if (e.target.matches('#distanceFilter')) {
                     handleDistanceFilterChange(e.target.value);
@@ -2389,6 +3065,110 @@
         function isDateInMonth(date, targetYear, targetMonth) {
             return date.getUTCFullYear() === targetYear && date.getUTCMonth() === targetMonth;
         }
+        
+        // Contact Form Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const contactForm = document.getElementById('contactForm');
+            const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+            const contactFormAlert = document.getElementById('contactFormAlert');
+            const contactMessage = document.getElementById('contactMessage');
+            const charCount = document.getElementById('charCount');
+            
+            // Character counter for message
+            if (contactMessage && charCount) {
+                contactMessage.addEventListener('input', function() {
+                    charCount.textContent = this.value.length;
+                    if (this.value.length > 1800) {
+                        charCount.classList.add('text-warning');
+                    } else {
+                        charCount.classList.remove('text-warning');
+                    }
+                });
+            }
+            
+            // Handle form submission
+            if (contactForm) {
+                contactForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    // Hide previous alerts
+                    contactFormAlert.classList.add('d-none');
+                    contactFormAlert.classList.remove('alert-success', 'alert-danger');
+                    
+                    // Disable submit button
+                    contactSubmitBtn.disabled = true;
+                    contactSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+                    
+                    // Get form data
+                    const formData = {
+                        name: document.getElementById('contactName').value.trim(),
+                        email: document.getElementById('contactEmail').value.trim(),
+                        subject: document.getElementById('contactSubject').value,
+                        message: document.getElementById('contactMessage').value.trim()
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/contact', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            // Success
+                            contactFormAlert.classList.remove('d-none');
+                            contactFormAlert.classList.add('alert-success');
+                            contactFormAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + data.message;
+                            
+                            // Reset form
+                            contactForm.reset();
+                            if (charCount) charCount.textContent = '0';
+                            
+                            // Close modal after 2 seconds
+                            setTimeout(() => {
+                                const modalElement = document.getElementById('contactModal');
+                                const modal = bootstrap.Modal.getInstance(modalElement);
+                                if (modal) {
+                                    modal.hide();
+                                }
+                                // Clear alert after modal closes
+                                setTimeout(() => {
+                                    contactFormAlert.classList.add('d-none');
+                                }, 300);
+                            }, 2000);
+                        } else {
+                            // Error
+                            contactFormAlert.classList.remove('d-none');
+                            contactFormAlert.classList.add('alert-danger');
+                            contactFormAlert.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + (data.error || 'An error occurred. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Contact form error:', error);
+                        contactFormAlert.classList.remove('d-none');
+                        contactFormAlert.classList.add('alert-danger');
+                        contactFormAlert.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Network error. Please check your connection and try again.';
+                    } finally {
+                        // Re-enable submit button
+                        contactSubmitBtn.disabled = false;
+                        contactSubmitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Feedback';
+                    }
+                });
+            }
+            
+            // Reset form when modal is closed
+            const contactModal = document.getElementById('contactModal');
+            if (contactModal) {
+                contactModal.addEventListener('hidden.bs.modal', function() {
+                    if (contactForm) contactForm.reset();
+                    if (contactFormAlert) contactFormAlert.classList.add('d-none');
+                    if (charCount) charCount.textContent = '0';
+                });
+            }
+        });
     </script>
 </body>
 </html>

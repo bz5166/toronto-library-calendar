@@ -48,6 +48,7 @@ mongoose.connect(mongoUri)
 
 // Routes
 app.use('/api/events', eventRoutes);
+app.use('/api/contact', require('./routes/contact'));
 
 // Add this after your existing routes
 const { SitemapStream, streamToPromise } = require('sitemap');
