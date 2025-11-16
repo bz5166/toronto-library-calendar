@@ -1359,18 +1359,6 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3 mb-3">
-                    <label class="form-label mb-2">Category</label>
-                    <div class="filter-group">
-                        <input type="checkbox" id="categoryFilterToggle" class="filter-toggle" />
-                        <label for="categoryFilterToggle" class="filter-header">
-                            <span>Select Categories</span>
-                        </label>
-                        <div class="filter-body" id="categoryFilterBody">
-                            <!-- Options will be populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3 mb-3">
                     <label class="form-label mb-2">Age Group</label>
                     <div class="filter-group">
                         <input type="checkbox" id="ageGroupFilterToggle" class="filter-toggle" />
@@ -1378,6 +1366,18 @@
                             <span>Select Age Groups</span>
                         </label>
                         <div class="filter-body" id="ageGroupFilterBody">
+                            <!-- Options will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <label class="form-label mb-2">Category</label>
+                    <div class="filter-group">
+                        <input type="checkbox" id="categoryFilterToggle" class="filter-toggle" />
+                        <label for="categoryFilterToggle" class="filter-header">
+                            <span>Select Categories</span>
+                        </label>
+                        <div class="filter-body" id="categoryFilterBody">
                             <!-- Options will be populated by JavaScript -->
                         </div>
                     </div>
@@ -1604,10 +1604,28 @@
     
     <!-- Your existing JavaScript code goes here -->
     <script>
+        // Helper function to get current date in EST timezone
+        function getDateInEST() {
+            const now = new Date();
+            // Get date components in EST/EDT (America/New_York timezone)
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/New_York',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+            const parts = formatter.formatToParts(now);
+            const estYear = parseInt(parts.find(p => p.type === 'year').value);
+            const estMonth = parseInt(parts.find(p => p.type === 'month').value) - 1; // Month is 0-indexed
+            const estDay = parseInt(parts.find(p => p.type === 'day').value);
+            // Create a date object with EST date components (at midnight local time)
+            return new Date(estYear, estMonth, estDay);
+        }
+        
         // Global Variables
         let allEvents = [];
         let filteredEvents = [];
-        let currentDate = new Date();
+        let currentDate = getDateInEST();
         let map = null;
         let libraryMarkers = [];
         let libraryCoordinates = {};
@@ -1868,7 +1886,7 @@
                 currentDate.setMonth(currentDate.getMonth() + 1);
                 renderCalendar();
                 } else if (e.target.matches('#todayBtn')) {
-                currentDate = new Date();
+                currentDate = getDateInEST();
                 renderCalendar();
                 } else if (e.target.closest('.view-all-programs-btn')) {
                     // Handle "View All Programs" button click
@@ -2507,6 +2525,24 @@
             console.log('🔍 === END ENVIRONMENT DEBUG ===');
         }
 
+        // Helper function to get day of week in EST
+        function getDayOfWeekInEST(date) {
+            // Get the date components as they appear in EST
+            const estFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/New_York',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            const parts = estFormatter.formatToParts(date);
+            const weekday = parts.find(p => p.type === 'weekday').value;
+            
+            // Convert weekday name to day number (0 = Sunday, 6 = Saturday)
+            const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return weekdays.indexOf(weekday);
+        }
+        
         // Optimized calendar rendering with debugging
         function renderCalendar() {
             console.log(' Calendar rendering started');
@@ -2522,11 +2558,25 @@
             document.getElementById('currentMonth').textContent =
                 currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             
-            // Use UTC dates to avoid timezone issues
-            const firstDay = new Date(Date.UTC(year, month, 1));
-            const lastDay = new Date(Date.UTC(year, month + 1, 0));
-            const startDate = new Date(firstDay);
-            startDate.setUTCDate(startDate.getUTCDate() - firstDay.getUTCDay());
+            // Build calendar using EST dates
+            // Create first day of month in EST
+            const firstDayEST = new Date(year, month, 1);
+            const firstDayOfWeek = getDayOfWeekInEST(firstDayEST);
+            
+            // Create last day of month in EST
+            const lastDayEST = new Date(year, month + 1, 0);
+            
+            // Calculate start date (Sunday of the week containing the first day)
+            const startDate = new Date(firstDayEST);
+            startDate.setDate(startDate.getDate() - firstDayOfWeek);
+            
+            // Calculate end date (Saturday of the week containing the last day)
+            const lastDayOfWeek = getDayOfWeekInEST(lastDayEST);
+            const endDate = new Date(lastDayEST);
+            endDate.setDate(endDate.getDate() + (6 - lastDayOfWeek));
+            
+            const firstDay = firstDayEST;
+            const lastDay = lastDayEST;
             
             console.log('🔍 - First Day:', firstDay);
             console.log(' - Last Day:', lastDay);
@@ -2556,13 +2606,26 @@
                 
                 const eventDate = new Date(event.startDate);
                 
-                // Check if event falls within the visible calendar range using UTC comparison
-                const eventDateUTC = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate()));
-                const startDateUTC = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-                const lastDayUTC = new Date(Date.UTC(lastDay.getUTCFullYear(), lastDay.getUTCMonth(), lastDay.getUTCDate()));
+                // Get EST date components for the event
+                const eventDateEST = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/New_York',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                }).formatToParts(eventDate);
+                const eventYear = parseInt(eventDateEST.find(p => p.type === 'year').value);
+                const eventMonth = parseInt(eventDateEST.find(p => p.type === 'month').value) - 1;
+                const eventDay = parseInt(eventDateEST.find(p => p.type === 'day').value);
                 
-                if (eventDateUTC >= startDateUTC && eventDateUTC <= lastDayUTC) {
-                    const dateKey = eventDate.toISOString().split('T')[0];
+                // Create EST date objects for comparison
+                const eventDateESTObj = new Date(eventYear, eventMonth, eventDay);
+                const startDateESTObj = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                const endDateESTObj = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+                
+                // Check if event falls within the visible calendar range using EST
+                if (eventDateESTObj >= startDateESTObj && eventDateESTObj <= endDateESTObj) {
+                    // Create dateKey in YYYY-MM-DD format using EST date
+                    const dateKey = `${eventYear}-${String(eventMonth + 1).padStart(2, '0')}-${String(eventDay).padStart(2, '0')}`;
                     if (!visibleEvents.has(dateKey)) {
                         visibleEvents.set(dateKey, []);
                     }
@@ -2573,49 +2636,43 @@
             console.log(' - Month Events Map:', visibleEvents);
             
             // Calculate the number of weeks needed for this month
-            const endDate = new Date(lastDay);
-            endDate.setUTCDate(lastDay.getUTCDate() + (6 - lastDay.getUTCDay()));
-            const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
             const weeksNeeded = Math.ceil(totalDays / 7);
             
             // Add calendar days
-            // Get today's date at local midnight for accurate comparison
-            const now = new Date();
-            const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-            const todayYear = todayAtMidnight.getFullYear();
-            const todayMonth = todayAtMidnight.getMonth();
-            const todayDay = todayAtMidnight.getDate();
+            // Get today's date in EST timezone for accurate comparison
+            const estNow = getDateInEST();
+            const todayYear = estNow.getFullYear();
+            const todayMonth = estNow.getMonth();
+            const todayDay = estNow.getDate();
             
-            console.log('🔍 Today (local midnight):', `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`);
+            console.log('🔍 Today (EST):', `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`);
             
             for (let i = 0; i < weeksNeeded * 7; i++) {
+                // Create cell date using EST dates (add days to startDate)
                 const cellDate = new Date(startDate);
-                cellDate.setUTCDate(startDate.getUTCDate() + i);
+                cellDate.setDate(startDate.getDate() + i);
                 
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day';
-                
-                // FIXED: Only show events for days that belong to the current month using UTC
-                const isCurrentMonth = cellDate.getUTCMonth() === month && cellDate.getUTCFullYear() === year;
-                if (!isCurrentMonth) {
-                    dayElement.classList.add('other-month');
-                }
-                
-                // Get local date components from cellDate for accurate comparison
-                // cellDate was created with UTC, but we need its local representation
+                // Get EST date components for this cell
                 const cellYear = cellDate.getFullYear();
                 const cellMonth = cellDate.getMonth();
                 const cellDay = cellDate.getDate();
                 
-                // Debug first few days to verify accuracy
-                if (i < 3) {
-                    const cellUTCYear = cellDate.getUTCFullYear();
-                    const cellUTCMonth = cellDate.getUTCMonth();
-                    const cellUTCDay = cellDate.getUTCDate();
-                    console.log(`🔍 Cell ${i}: UTC (${cellUTCYear}-${cellUTCMonth+1}-${cellUTCDay}) -> Local (${cellYear}-${cellMonth+1}-${cellDay}), Today (${todayYear}-${todayMonth+1}-${todayDay})`);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                // Check if this day belongs to the current month
+                const isCurrentMonth = cellMonth === month && cellYear === year;
+                if (!isCurrentMonth) {
+                    dayElement.classList.add('other-month');
                 }
                 
-                // Compare year, month, and day components
+                // Debug first few days to verify accuracy
+                if (i < 3) {
+                    console.log(`🔍 Cell ${i}: EST (${cellYear}-${cellMonth+1}-${cellDay}), Today EST (${todayYear}-${todayMonth+1}-${todayDay})`);
+                }
+                
+                // Compare year, month, and day components using EST
                 if (cellYear === todayYear && cellMonth === todayMonth && cellDay === todayDay) {
                     dayElement.classList.add('today');
                     console.log('✅ Today highlighted correctly on cell:', i, `Date: ${cellYear}-${cellMonth+1}-${cellDay}`);
@@ -2623,11 +2680,13 @@
                 
                 const dayNumber = document.createElement('div');
                 dayNumber.className = 'day-number';
-                dayNumber.textContent = cellDate.getUTCDate();
+                // Display the EST day number
+                dayNumber.textContent = cellDay;
                 dayElement.appendChild(dayNumber);
                 
                 // Show events only for days in the current month
-                const dateKey = cellDate.toISOString().split('T')[0];
+                // Create dateKey in YYYY-MM-DD format using EST date
+                const dateKey = `${cellYear}-${String(cellMonth + 1).padStart(2, '0')}-${String(cellDay).padStart(2, '0')}`;
                 let dayEvents = [];
                 
                 // Only get events if this day belongs to the current month
@@ -2635,7 +2694,7 @@
                     dayEvents = visibleEvents.get(dateKey) || [];
                     
                     // Debug for the first day of the month
-                    if (cellDate.getUTCDate() === 1 && cellDate.getUTCMonth() === month) {
+                    if (cellDay === 1 && cellMonth === month) {
                         console.log(' - Day 1 Debug:');
                         console.log('🔍   - Cell Date:', cellDate);
                         console.log('🔍   - Date Key:', dateKey);
@@ -3222,7 +3281,7 @@
                     currentDate.setMonth(currentDate.getMonth() + 1);
                     renderCalendar();
                 } else if (e.target.matches('#todayBtn')) {
-                    currentDate = new Date();
+                    currentDate = getDateInEST();
                     renderCalendar();
                 }
             });
