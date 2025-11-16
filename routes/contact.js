@@ -123,25 +123,45 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
     console.log('   Message:', contactData.message);
     console.log('   Timestamp:', contactData.timestamp);
     
-    // TODO: Send email using nodemailer or your email service
-    // Example with nodemailer (uncomment and configure):
+    // Check if SMTP is configured
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
     
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      console.warn('⚠️  SMTP not configured. Email sending skipped.');
+      console.warn('   Please set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables.');
+      console.warn('   Submission logged above. Email will not be sent.');
+      
+      // Still return success to user, but log the issue
+      return res.json({
+        success: true,
+        message: 'Thank you for your feedback! We will review your suggestion and get back to you if needed.'
+      });
+    }
     
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: process.env.CONTACT_EMAIL || 'tpleventscalendar@gmail.com',
-      subject: `[TPL Programs] ${sanitizedSubject}`,
-      text: `
+    // Send email using nodemailer
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        },
+        // Add connection timeout to prevent hanging
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 10000
+      });
+      
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || smtpUser,
+        to: process.env.CONTACT_EMAIL || 'tpleventscalendar@gmail.com',
+        subject: `[TPL Programs] ${sanitizedSubject}`,
+        text: `
         Name: ${sanitizedName || 'Not provided'}
         Email: ${sanitizedEmail || 'Not provided'}
         Subject: ${sanitizedSubject}
@@ -153,7 +173,7 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
         Submitted at: ${contactData.timestamp}
         IP: ${contactData.ip}
       `,
-      html: `
+        html: `
         <h2>New Contact Form Submission</h2>
         <p><strong>Name:</strong> ${sanitizedName || '<em>Not provided</em>'}</p>
         <p><strong>Email:</strong> ${sanitizedEmail || '<em>Not provided</em>'}</p>
@@ -163,7 +183,18 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
         <hr>
         <p><small>Submitted at: ${contactData.timestamp}<br>IP: ${contactData.ip}</small></p>
       `
-    });
+      });
+      
+      console.log('✅ Email sent successfully');
+    } catch (emailError) {
+      // Log email error but don't fail the request
+      console.error('❌ Failed to send email:', emailError.message);
+      console.error('   Submission was received but email delivery failed.');
+      console.error('   Check SMTP configuration and network connectivity.');
+      
+      // Still return success to user since submission was received
+      // The error is logged for admin review
+    }
     
     
     res.json({

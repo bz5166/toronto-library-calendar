@@ -245,6 +245,160 @@
             box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
         }
         
+        /* Multi-Select Filter Groups */
+        .filter-group {
+            width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 1rem;
+        }
+        
+        /* Header (click to toggle) */
+        .filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            cursor: pointer;
+            color: #0046be;
+            font-weight: 600;
+            border-bottom: 1px solid #e0e0e0;
+            user-select: none;
+        }
+        
+        .filter-header span {
+            pointer-events: none;
+        }
+        
+        /* Arrow icon */
+        .filter-header::after {
+            content: "▾";
+            font-size: 12px;
+            color: #555;
+            transition: transform 0.2s ease;
+        }
+        
+        /* Hide the native checkbox used for toggling the dropdown */
+        .filter-toggle {
+            display: none;
+        }
+        
+        /* Dropdown list */
+        .filter-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            padding: 0 12px;
+        }
+        
+        /* When toggle checked, show list */
+        .filter-toggle:checked + label + .filter-body {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 10px;
+            padding-top: 5px;
+        }
+        
+        /* Custom scrollbar styling for filter bodies */
+        .filter-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .filter-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .filter-body::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .filter-body::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Change arrow direction when open */
+        .filter-toggle:checked + label::after {
+            content: "▴";
+        }
+        
+        /* Each item */
+        .filter-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .filter-option label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            color: #111;
+            width: 100%;
+        }
+        
+        /* Checkbox styling */
+        .filter-option input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        /* Count number */
+        .filter-count {
+            color: #777;
+            font-size: 0.9em;
+        }
+        
+        /* Active Filters Display */
+        .active-filters-display {
+            padding: 0.75rem 1rem;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .active-filters-display .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            gap: 0.25rem;
+        }
+        
+        .active-filters-display .filter-badge .filter-label {
+            font-weight: 600;
+            margin-right: 0.25rem;
+        }
+        
+        .active-filters-display .filter-badge .filter-value {
+            opacity: 0.95;
+        }
+        
+        .active-filters-display .filter-badge .filter-close {
+            cursor: pointer;
+            margin-left: 0.25rem;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        
+        .active-filters-display .filter-badge .filter-close:hover {
+            opacity: 1;
+        }
+        
         /* View Toggle */
         .view-toggle {
             background: white;
@@ -1188,35 +1342,47 @@
                 Search & Filter Programs
             </div>
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-12 col-lg-3 mb-3">
                     <label class="form-label">Search Programs</label>
                     <input type="text" class="form-control" id="searchInput" placeholder="Search programs...">
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">
-                        Library
-                        <span id="libraryFilterBadge" class="badge bg-primary ms-2" style="display: none;">
-                            <i class="fas fa-check-circle me-1"></i>
-                            <span id="libraryFilterBadgeText"></span>
-                        </span>
-                    </label>
-                    <select class="form-select" id="libraryFilter">
-                        <option value="">All Libraries</option>
-                    </select>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <label class="form-label mb-2">Library</label>
+                    <div class="filter-group">
+                        <input type="checkbox" id="libraryFilterToggle" class="filter-toggle" />
+                        <label for="libraryFilterToggle" class="filter-header">
+                            <span>Select Libraries</span>
+                        </label>
+                        <div class="filter-body" id="libraryFilterBody">
+                            <!-- Options will be populated by JavaScript -->
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                    </select>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <label class="form-label mb-2">Category</label>
+                    <div class="filter-group">
+                        <input type="checkbox" id="categoryFilterToggle" class="filter-toggle" />
+                        <label for="categoryFilterToggle" class="filter-header">
+                            <span>Select Categories</span>
+                        </label>
+                        <div class="filter-body" id="categoryFilterBody">
+                            <!-- Options will be populated by JavaScript -->
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">Age Group</label>
-                    <select class="form-select" id="ageGroupFilter">
-                        <option value="">All Ages</option>
-                    </select>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <label class="form-label mb-2">Age Group</label>
+                    <div class="filter-group">
+                        <input type="checkbox" id="ageGroupFilterToggle" class="filter-toggle" />
+                        <label for="ageGroupFilterToggle" class="filter-header">
+                            <span>Select Age Groups</span>
+                        </label>
+                        <div class="filter-body" id="ageGroupFilterBody">
+                            <!-- Options will be populated by JavaScript -->
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2 mb-3">
+                <div class="col-md-6 col-lg-2 mb-3">
                     <label class="form-label">Distance</label>
                     <select class="form-select" id="distanceFilter">
                         <option value="">Any Distance</option>
@@ -1226,12 +1392,19 @@
                         <option value="50">Within 50 km</option>
                     </select>
                 </div>
-                <div class="col-md-2 mb-3">
+                <div class="col-md-6 col-lg-2 mb-3">
                     <label class="form-label">&nbsp;</label>
                     <button class="btn btn-outline-secondary w-100" id="clearFilters">
                         <i class="fas fa-times me-1"></i>
                         Clear Filters
                     </button>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div id="activeFiltersDisplay" class="active-filters-display">
+                        <small class="text-muted">No filters selected</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1671,14 +1844,10 @@
         function setupEventListeners() {
             // Use event delegation for better performance
             document.addEventListener('change', function(e) {
-                if (e.target.matches('#libraryFilter')) {
-                    // Update badge when library filter changes
-                    const libraryFilter = document.getElementById('libraryFilter');
-                    const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
-                    const selectedLibrary = libraryFilter.value ? selectedOption.text : '';
-                    updateLibraryFilterBadge(selectedLibrary);
+                // Handle checkbox filter changes
+                if (e.target.matches('input[type="checkbox"][data-filter-type]')) {
                     filterEvents();
-                } else if (e.target.matches('#categoryFilter, #ageGroupFilter, #distanceFilter, #dateFilter')) {
+                } else if (e.target.matches('#distanceFilter, #dateFilter')) {
                     filterEvents();
                 }
             });
@@ -1730,14 +1899,14 @@
         // Optimized filter events function
         function filterEvents() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const library = document.getElementById('libraryFilter').value;
-            const category = document.getElementById('categoryFilter').value;
-            const ageGroup = document.getElementById('ageGroupFilter').value;
+            const libraries = getSelectedFilterValues('library');
+            const categories = getSelectedFilterValues('category');
+            const ageGroups = getSelectedFilterValues('ageGroup');
             const selectedDate = document.getElementById('dateFilter').value;
             const distance = document.getElementById('distanceFilter').value;
 
-            // Create filter state string for caching
-            const filterState = `${search}|${library}|${category}|${ageGroup}|${selectedDate}|${distance}`;
+            // Create filter state string for caching (using sorted arrays for consistency)
+            const filterState = `${search}|${libraries.sort().join(',')}|${categories.sort().join(',')}|${ageGroups.sort().join(',')}|${selectedDate}|${distance}`;
             
             // Check cache first
             if (filteredEventsCache.has(filterState) && filterState === lastFilterState) {
@@ -1770,14 +1939,14 @@
                     if (!searchableText.includes(search)) return false;
                 }
                 
-                // Early exit for library filter
-                if (library && event.library !== library) return false;
+                // Early exit for library filter (multiple selections)
+                if (libraries.length > 0 && !libraries.includes(event.library)) return false;
                 
-                // Early exit for category filter
-                if (category && event.category !== category) return false;
+                // Early exit for category filter (multiple selections)
+                if (categories.length > 0 && !categories.includes(event.category)) return false;
                 
-                // Early exit for age group filter
-                if (ageGroup && event.ageGroup !== ageGroup) return false;
+                // Early exit for age group filter (multiple selections)
+                if (ageGroups.length > 0 && !ageGroups.includes(event.ageGroup)) return false;
                 
                 // Early exit for date filter
                 if (selectedDate) {
@@ -1818,18 +1987,9 @@
 
             updateEventCount();
             updateStatusBar();
+            updateActiveFiltersDisplay();
             renderCalendar();
             updateMapMarkers();
-            
-            // Update library filter badge if a library is selected
-            const libraryFilter = document.getElementById('libraryFilter');
-            if (libraryFilter && libraryFilter.value) {
-                const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
-                const selectedLibrary = selectedOption ? selectedOption.text : '';
-                updateLibraryFilterBadge(selectedLibrary);
-            } else {
-                updateLibraryFilterBadge('');
-            }
         }
 
         // Load programs from API
@@ -1874,40 +2034,144 @@
             const categories = [...new Set(allEvents.map(event => event.category).filter(Boolean))].sort();
             const ageGroups = [...new Set(allEvents.map(event => event.ageGroup).filter(Boolean))].sort();
 
-            populateSelect('libraryFilter', libraries);
-            populateSelect('categoryFilter', categories);
-            populateSelect('ageGroupFilter', ageGroups);
+            populateFilterGroup('libraryFilterBody', libraries, 'library');
+            populateFilterGroup('categoryFilterBody', categories, 'category');
+            populateFilterGroup('ageGroupFilterBody', ageGroups, 'ageGroup');
         }
 
-        function populateSelect(selectId, options) {
-            const select = document.getElementById(selectId);
-            const currentValue = select.value;
+        // Populate filter group with checkboxes and counts
+        function populateFilterGroup(containerId, options, filterType) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
             
-            select.innerHTML = select.options[0].outerHTML;
+            container.innerHTML = '';
             
             options.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                select.appendChild(optionElement);
+                // Count how many events match this option
+                const count = allEvents.filter(event => {
+                    if (filterType === 'library') return event.library === option;
+                    if (filterType === 'category') return event.category === option;
+                    if (filterType === 'ageGroup') return event.ageGroup === option;
+                    return false;
+                }).length;
+                
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'filter-option';
+                
+                const checkboxId = `${filterType}_${option.replace(/\s+/g, '_')}`;
+                
+                optionDiv.innerHTML = `
+                    <label>
+                        <input type="checkbox" id="${checkboxId}" value="${option}" data-filter-type="${filterType}">
+                        <span>${option}</span>
+                    </label>
+                    <span class="filter-count">(${count})</span>
+                `;
+                
+                container.appendChild(optionDiv);
+            });
+        }
+        
+        // Get selected values from a filter group
+        function getSelectedFilterValues(filterType) {
+            const checkboxes = document.querySelectorAll(`input[type="checkbox"][data-filter-type="${filterType}"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+        
+        // Update the active filters display
+        function updateActiveFiltersDisplay() {
+            const display = document.getElementById('activeFiltersDisplay');
+            if (!display) return;
+            
+            const libraries = getSelectedFilterValues('library');
+            const categories = getSelectedFilterValues('category');
+            const ageGroups = getSelectedFilterValues('ageGroup');
+            
+            // Clear the display
+            display.innerHTML = '';
+            
+            // If no filters are selected, show message
+            if (libraries.length === 0 && categories.length === 0 && ageGroups.length === 0) {
+                display.innerHTML = '<small class="text-muted">No filters selected</small>';
+                return;
+            }
+            
+            // Add library filters
+            libraries.forEach(library => {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Library:</span>
+                    <span class="filter-value">${escapeHtml(library)}</span>
+                    <span class="filter-close" data-filter-type="library" data-value="${escapeHtml(library)}" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
             });
             
-            select.value = currentValue;
+            // Add category filters
+            categories.forEach(category => {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Category:</span>
+                    <span class="filter-value">${escapeHtml(category)}</span>
+                    <span class="filter-close" data-filter-type="category" data-value="${escapeHtml(category)}" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
+            });
+            
+            // Add age group filters
+            ageGroups.forEach(ageGroup => {
+                const badge = document.createElement('span');
+                badge.className = 'filter-badge';
+                badge.innerHTML = `
+                    <span class="filter-label">Age:</span>
+                    <span class="filter-value">${escapeHtml(ageGroup)}</span>
+                    <span class="filter-close" data-filter-type="ageGroup" data-value="${escapeHtml(ageGroup)}" title="Remove filter">×</span>
+                `;
+                display.appendChild(badge);
+            });
+            
+            // Add click handlers for close buttons
+            display.querySelectorAll('.filter-close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const filterType = this.getAttribute('data-filter-type');
+                    const value = this.getAttribute('data-value');
+                    
+                    // Find and uncheck the corresponding checkbox
+                    // Need to escape special characters in value for CSS selector
+                    const escapedValue = value.replace(/"/g, '\\"').replace(/'/g, "\\'");
+                    const checkbox = document.querySelector(`input[type="checkbox"][data-filter-type="${filterType}"][value="${escapedValue}"]`);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        filterEvents();
+                    }
+                });
+            });
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Clear all filters - Updated to include date filter
         function clearFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('libraryFilter').value = '';
-            document.getElementById('categoryFilter').value = '';
-            document.getElementById('ageGroupFilter').value = '';
+            
+            // Uncheck all filter checkboxes
+            document.querySelectorAll('input[type="checkbox"][data-filter-type]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
             document.getElementById('dateFilter').value = ''; // Clear date filter too
             document.getElementById('distanceFilter').value = ''; // Clear distance filter too
             
-            // Update badge to hide it
-            updateLibraryFilterBadge('');
-            
             filterEvents();
+            updateActiveFiltersDisplay();
         }
 
         // Update program count
@@ -2143,35 +2407,29 @@
                 map.closePopup();
             }
             
-            // Set the library filter
-            const libraryFilter = document.getElementById('libraryFilter');
-            if (libraryFilter) {
-                // Find the option that matches the library name (case-insensitive)
-                const options = libraryFilter.options;
-                let found = false;
-                for (let i = 0; i < options.length; i++) {
-                    const optionText = options[i].text.trim();
-                    const optionValue = options[i].value.trim();
-                    const searchName = libraryName.trim();
-                    
-                    // Try exact match first
-                    if (optionText === searchName || optionValue === searchName) {
-                        libraryFilter.value = optionValue;
-                        found = true;
-                        break;
-                    }
-                    // Try case-insensitive match
-                    if (optionText.toLowerCase() === searchName.toLowerCase() || 
-                        optionValue.toLowerCase() === searchName.toLowerCase()) {
-                        libraryFilter.value = optionValue;
-                        found = true;
-                        break;
-                    }
+            // Uncheck all library checkboxes first
+            document.querySelectorAll('input[type="checkbox"][data-filter-type="library"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Find and check the checkbox that matches the library name
+            const libraryCheckboxes = document.querySelectorAll('input[type="checkbox"][data-filter-type="library"]');
+            const searchName = libraryName.trim();
+            let found = false;
+            
+            for (const checkbox of libraryCheckboxes) {
+                const checkboxValue = checkbox.value.trim();
+                if (checkboxValue === searchName || checkboxValue.toLowerCase() === searchName.toLowerCase()) {
+                    checkbox.checked = true;
+                    found = true;
+                    break;
                 }
-                // If no match found, try setting the value directly (might work if library name matches exactly)
-                if (!found) {
-                    libraryFilter.value = libraryName;
-                }
+            }
+            
+            // If library filter group is closed, open it
+            const libraryToggle = document.getElementById('libraryFilterToggle');
+            if (libraryToggle && !libraryToggle.checked) {
+                libraryToggle.checked = true;
             }
             
             // Select the calendar radio button
@@ -2179,9 +2437,6 @@
             if (calendarRadio) {
                 calendarRadio.checked = true;
             }
-            
-            // Update the library filter badge to show selection
-            updateLibraryFilterBadge(libraryName);
             
             // Show notification
             showFilterNotification(`Showing all programs for ${libraryName}`);
@@ -2196,27 +2451,10 @@
             document.getElementById('calendarContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Function to update the library filter badge
+        // Function to update the library filter badge (deprecated - kept for compatibility)
         function updateLibraryFilterBadge(libraryName) {
-            const badge = document.getElementById('libraryFilterBadge');
-            const badgeText = document.getElementById('libraryFilterBadgeText');
-            const libraryFilter = document.getElementById('libraryFilter');
-            
-            if (badge && badgeText && libraryFilter) {
-                if (libraryName && libraryFilter.value) {
-                    // Show badge with selected library name
-                    badgeText.textContent = libraryName;
-                    badge.style.display = 'inline-block';
-                    // Add visual highlight to the select
-                    libraryFilter.classList.add('border-primary');
-                    libraryFilter.style.borderWidth = '2px';
-                } else {
-                    // Hide badge when no filter is selected
-                    badge.style.display = 'none';
-                    libraryFilter.classList.remove('border-primary');
-                    libraryFilter.style.borderWidth = '';
-                }
-            }
+            // This function is no longer needed with checkbox filters
+            // Kept for compatibility with any remaining code that might call it
         }
 
         // Function to show filter notification
@@ -2958,14 +3196,10 @@
         function setupEventListeners() {
             // Use event delegation for filter changes
             document.addEventListener('change', function(e) {
-                if (e.target.matches('#libraryFilter')) {
-                    // Update badge when library filter changes
-                    const libraryFilter = document.getElementById('libraryFilter');
-                    const selectedOption = libraryFilter.options[libraryFilter.selectedIndex];
-                    const selectedLibrary = libraryFilter.value ? selectedOption.text : '';
-                    updateLibraryFilterBadge(selectedLibrary);
+                // Handle checkbox filter changes
+                if (e.target.matches('input[type="checkbox"][data-filter-type]')) {
                     filterEvents();
-                } else if (e.target.matches('#categoryFilter, #ageGroupFilter, #dateFilter')) {
+                } else if (e.target.matches('#dateFilter')) {
                     filterEvents();
                 } else if (e.target.matches('#distanceFilter')) {
                     handleDistanceFilterChange(e.target.value);
@@ -3040,12 +3274,16 @@
         // Update the clearFilters function to also clear distance filter
         function clearFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('libraryFilter').value = '';
-            document.getElementById('categoryFilter').value = '';
-            document.getElementById('ageGroupFilter').value = '';
+            
+            // Uncheck all filter checkboxes
+            document.querySelectorAll('input[type="checkbox"][data-filter-type]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
             document.getElementById('dateFilter').value = '';
             document.getElementById('distanceFilter').value = ''; // Clear distance filter too
             filterEvents();
+            updateActiveFiltersDisplay();
         }
 
         // Add this helper function for timezone-safe date handling
