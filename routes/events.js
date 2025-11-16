@@ -515,4 +515,161 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
+
+// GET /new - Get newly created programs based on lastUpdated field
+router.get('/new', async (req, res) => {
+  try {
+    const { days = 28 } = req.query; // Default to 28 days, but allow 1, 4, 7, 14, 21, 28
+    
+    // Validate days parameter
+    const validDays = [1, 4, 7, 14, 21, 28];
+    const daysNum = parseInt(days, 10);
+    if (!validDays.includes(daysNum)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid days parameter. Must be one of: ${validDays.join(', ')}`,
+        events: []
+      });
+    }
+
+    // Calculate the date threshold
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() - daysNum);
+
+    console.log(`📅 Fetching programs created in last ${daysNum} days (since ${thresholdDate.toISOString()})`);
+
+    let events = [];
+    let source = 'unknown';
+
+    // Try database first if available
+    if (LibraryEvent) {
+      try {
+        // First, check total count in database
+        const totalCount = await LibraryEvent.countDocuments();
+        console.log(`📊 Total events in database: ${totalCount}`);
+        
+        // Check a sample event to see field structure
+        if (totalCount > 0) {
+          const sampleEvent = await LibraryEvent.findOne().lean();
+          console.log(`📋 Sample event fields:`, Object.keys(sampleEvent));
+          console.log(`📋 Sample lastUpdated value:`, sampleEvent.lastUpdated);
+          console.log(`📋 Sample lastUpdated type:`, typeof sampleEvent.lastUpdated);
+        }
+
+        // Query database for events updated in the last N days
+        events = await LibraryEvent.find({
+          lastUpdated: { $gte: thresholdDate }
+        })
+        .sort({ lastUpdated: -1 }) // Sort by most recently updated first
+        .lean(); // Use lean() for better performance
+
+        console.log(`✅ Found ${events.length} programs in database created in last ${daysNum} days`);
+        source = 'database';
+      } catch (dbError) {
+        console.error('❌ Database query error:', dbError);
+        // Fall through to API fallback
+      }
+    }
+
+    // If database is empty or not available, fall back to API
+    if (events.length === 0 && libraryAPI && processor) {
+      console.log('🔄 Database empty or no results, fetching from API...');
+      try {
+        const { events: apiEvents } = await libraryAPI.getAllLibraryEvents();
+        const processedEvents = apiEvents.map(event => processor.normalizeEvent(event));
+        
+        // Filter events by lastUpdated (which is set to current date during normalization)
+        // Since normalization sets lastUpdated to now(), we'll use a different approach:
+        // Use the startDate to determine if it's a "new" event (within the last N days)
+        const now = new Date();
+        events = processedEvents.filter(event => {
+          if (event.lastUpdated) {
+            const lastUpdated = event.lastUpdated instanceof Date 
+              ? event.lastUpdated 
+              : new Date(event.lastUpdated);
+            return lastUpdated >= thresholdDate;
+          }
+          // Fallback: if no lastUpdated, check if startDate is in the future or recent
+          if (event.startDate) {
+            const startDate = event.startDate instanceof Date 
+              ? event.startDate 
+              : new Date(event.startDate);
+            // Consider events starting within the last N days or in the future as "new"
+            const daysDiff = (now - startDate) / (1000 * 60 * 60 * 24);
+            return daysDiff <= daysNum || daysDiff < 0; // Future events or recent past
+          }
+          return false;
+        }).sort((a, b) => {
+          // Sort by lastUpdated if available, otherwise by startDate
+          const aDate = a.lastUpdated ? (a.lastUpdated instanceof Date ? a.lastUpdated : new Date(a.lastUpdated)) : 
+                        (a.startDate ? (a.startDate instanceof Date ? a.startDate : new Date(a.startDate)) : new Date(0));
+          const bDate = b.lastUpdated ? (b.lastUpdated instanceof Date ? b.lastUpdated : new Date(b.lastUpdated)) : 
+                        (b.startDate ? (b.startDate instanceof Date ? b.startDate : new Date(b.startDate)) : new Date(0));
+          return bDate - aDate; // Most recent first
+        });
+
+        console.log(`✅ Found ${events.length} programs from API (filtered by date)`);
+        source = 'api';
+      } catch (apiError) {
+        console.error('❌ API fetch error:', apiError);
+      }
+    }
+
+    // Normalize dates for consistency
+    const normalizedEvents = events.map(event => {
+      const normalized = { ...event };
+      
+      // Convert dates to strings if they're Date objects
+      if (event.startDate) {
+        if (event.startDate instanceof Date) {
+          const year = event.startDate.getFullYear();
+          const month = event.startDate.getMonth() + 1;
+          const day = event.startDate.getDate();
+          normalized.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+      }
+      
+      if (event.endDate) {
+        if (event.endDate instanceof Date) {
+          const year = event.endDate.getFullYear();
+          const month = event.endDate.getMonth() + 1;
+          const day = event.endDate.getDate();
+          normalized.endDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+      }
+
+      // Format lastUpdated for display
+      if (event.lastUpdated) {
+        if (event.lastUpdated instanceof Date) {
+          normalized.lastUpdated = event.lastUpdated.toISOString();
+        } else if (typeof event.lastUpdated === 'string') {
+          // Already a string, keep as is
+          normalized.lastUpdated = event.lastUpdated;
+        }
+      }
+      
+      return normalized;
+    });
+
+    console.log(`📊 Returning ${normalizedEvents.length} events from ${source}`);
+
+    res.json({
+      success: true,
+      events: normalizedEvents,
+      total: normalizedEvents.length,
+      days: daysNum,
+      thresholdDate: thresholdDate.toISOString(),
+      source: source
+    });
+
+  } catch (error) {
+    console.error('❌ New programs API Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      events: []
+    });
+  }
+});
+
 module.exports = router;

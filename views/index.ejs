@@ -744,6 +744,93 @@
             overflow-y: auto;
         }
         
+        /* New Programs View Styles */
+        .new-programs-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        
+        .new-programs-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .new-program-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .new-program-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+        
+        .new-program-card h4 {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .new-program-card .program-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .new-program-card .program-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .new-program-card .program-description {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .new-program-card .program-date {
+            color: var(--secondary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .new-program-card .program-updated {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .new-programs-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .new-programs-header .d-flex {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+        }
+        
         /* Loading and Status */
         .loading {
             text-align: center;
@@ -1422,6 +1509,11 @@
                     <i class="fas fa-map me-1"></i>
                     Map
                 </label>
+                <input type="radio" class="btn-check" name="view" id="newProgramsView" value="new">
+                <label class="btn btn-outline-primary" for="newProgramsView">
+                    <i class="fas fa-star me-1"></i>
+                    New Programs
+                </label>
             </div>
         </div>
 
@@ -1484,6 +1576,48 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- New Programs View -->
+        <div id="newProgramsContainer" style="display: none;">
+            <div class="new-programs-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <h2 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        Newly Created Programs
+                    </h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="daysSelector" class="mb-0">
+                            <i class="fas fa-calendar-day me-1"></i>
+                            Show programs from last:
+                        </label>
+                        <select id="daysSelector" class="form-select" style="width: auto;">
+                            <option value="1">1 day</option>
+                            <option value="4">4 days</option>
+                            <option value="7">7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="21">21 days</option>
+                            <option value="28" selected>28 days</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0">
+                    Programs created or updated in the selected time period
+                </p>
+            </div>
+            
+            <div id="newProgramsLoading" class="text-center py-5" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Loading new programs...</p>
+            </div>
+            
+            <div id="newProgramsError" class="alert alert-danger" style="display: none;"></div>
+            
+            <div id="newProgramsList" class="new-programs-list">
+                <!-- New programs will be displayed here -->
             </div>
         </div>
     </main>
@@ -1591,6 +1725,7 @@
                     <ul class="list-unstyled">
                         <li><a href="#" onclick="showCalendarView(); return false;">Calendar View</a></li>
                         <li><a href="#" onclick="showMapView(); return false;">Map View</a></li>
+                        <li><a href="#" onclick="showNewProgramsView(); return false;">New Programs</a></li>
                         <li><a href="/health" target="_blank">API Health Check</a></li>
                     </ul>
                 </div>
@@ -1909,9 +2044,19 @@
                         showCalendarView();
                     } else if (this.value === 'map') {
                         showMapView();
+                    } else if (this.value === 'new') {
+                        showNewProgramsView();
                     }
                 });
             });
+            
+            // Days selector for new programs
+            const daysSelector = document.getElementById('daysSelector');
+            if (daysSelector) {
+                daysSelector.addEventListener('change', function() {
+                    loadNewPrograms(parseInt(this.value, 10));
+                });
+            }
         }
 
         // Optimized filter events function
@@ -2215,12 +2360,14 @@
         function showCalendarView() {
             document.getElementById('calendarContainer').style.display = 'block';
             document.getElementById('mapContainer').style.display = 'none';
+            document.getElementById('newProgramsContainer').style.display = 'none';
             renderCalendar();
         }
 
         function showMapView() {
             document.getElementById('calendarContainer').style.display = 'none';
             document.getElementById('mapContainer').style.display = 'block';
+            document.getElementById('newProgramsContainer').style.display = 'none';
             if (!map) {
                 initializeMap();
             }
@@ -2253,6 +2400,101 @@
                 console.log('📍 No stored location, requesting location for map view');
                 findCurrentLocation();
             }
+        }
+
+        function showNewProgramsView() {
+            document.getElementById('calendarContainer').style.display = 'none';
+            document.getElementById('mapContainer').style.display = 'none';
+            document.getElementById('newProgramsContainer').style.display = 'block';
+            
+            // Load new programs with default days (28)
+            const daysSelector = document.getElementById('daysSelector');
+            const days = daysSelector ? parseInt(daysSelector.value, 10) : 28;
+            loadNewPrograms(days);
+        }
+
+        // Load new programs from API
+        async function loadNewPrograms(days) {
+            const loadingEl = document.getElementById('newProgramsLoading');
+            const errorEl = document.getElementById('newProgramsError');
+            const listEl = document.getElementById('newProgramsList');
+            
+            // Show loading, hide error and list
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            listEl.innerHTML = '';
+            
+            try {
+                console.log(`📅 Loading new programs from last ${days} days...`);
+                const response = await fetch(`/api/events/new?days=${days}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log(`✅ Loaded ${data.events.length} new programs`);
+                    displayNewPrograms(data.events, days);
+                } else {
+                    throw new Error(data.error || 'Failed to load new programs');
+                }
+            } catch (error) {
+                console.error('❌ Error loading new programs:', error);
+                errorEl.textContent = `Error loading new programs: ${error.message}`;
+                errorEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        // Display new programs in the list
+        function displayNewPrograms(events, days) {
+            const listEl = document.getElementById('newProgramsList');
+            
+            if (events.length === 0) {
+                listEl.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No programs were created or updated in the last ${days} day${days !== 1 ? 's' : ''}.
+                    </div>
+                `;
+                return;
+            }
+            
+            listEl.innerHTML = events.map(event => {
+                const startDate = event.startDate ? new Date(event.startDate).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }) : 'Date TBD';
+                
+                const lastUpdated = event.lastUpdated ? new Date(event.lastUpdated).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '';
+                
+                const description = event.description || 'No description available.';
+                const truncatedDescription = description.length > 150 
+                    ? description.substring(0, 150) + '...' 
+                    : description;
+                
+                return `
+                    <div class="new-program-card" onclick="showEventDetails('${event.eventId}')">
+                        <h4>${escapeHtml(event.title || 'Untitled Program')}</h4>
+                        <div class="program-meta">
+                            ${event.library ? `<span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.library)}</span>` : ''}
+                            ${event.category ? `<span><i class="fas fa-tag"></i> ${escapeHtml(event.category)}</span>` : ''}
+                            ${event.ageGroup ? `<span><i class="fas fa-users"></i> ${escapeHtml(event.ageGroup)}</span>` : ''}
+                        </div>
+                        <div class="program-description">${escapeHtml(truncatedDescription)}</div>
+                        <div class="program-date">
+                            <i class="fas fa-calendar me-1"></i>
+                            ${startDate}
+                        </div>
+                        ${lastUpdated ? `<div class="program-updated">Updated: ${lastUpdated}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
         }
 
         // Initialize map
@@ -3309,6 +3551,8 @@
                         showCalendarView();
                     } else if (this.value === 'map') {
                         showMapView();
+                    } else if (this.value === 'new') {
+                        showNewProgramsView();
                     }
                 });
             });
