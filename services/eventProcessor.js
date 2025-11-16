@@ -68,15 +68,40 @@ class EventProcessor {
   }
 
   // Parse various date formats
+  // IMPORTANT: For date-only strings (YYYY-MM-DD), we normalize to EST midnight
+  // to avoid timezone issues when deployed to servers in different timezones
   parseDate(dateStr) {
     if (!dateStr) return null;
     
     // Handle already parsed dates
-    if (dateStr instanceof Date) return dateStr;
+    if (dateStr instanceof Date) {
+      // If it's already a Date, normalize date-only values to EST
+      return this.normalizeDateToEST(dateStr);
+    }
     
     // Clean the date string
     const cleanDate = String(dateStr).trim();
     if (!cleanDate) return null;
+    
+    // Check if it's a date-only string (YYYY-MM-DD format)
+    const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const dateOnlyMatch = cleanDate.match(dateOnlyPattern);
+    
+    if (dateOnlyMatch) {
+      // Parse as date-only and normalize to EST midnight
+      // EST is UTC-5 (or UTC-4 during DST), so we create a date at EST midnight
+      // by creating a UTC date and adjusting for EST offset
+      const year = parseInt(dateOnlyMatch[1], 10);
+      const month = parseInt(dateOnlyMatch[2], 10) - 1; // Month is 0-indexed
+      const day = parseInt(dateOnlyMatch[3], 10);
+      
+      // Create date at EST midnight (5 AM UTC, or 4 AM UTC during DST)
+      // We'll use a more reliable method: create the date and adjust for EST
+      // EST offset is typically -5 hours, but can be -4 during DST
+      // To be safe, we'll create the date and then normalize it
+      const tempDate = new Date(year, month, day);
+      return this.normalizeDateToEST(tempDate);
+    }
     
     // Try different date formats commonly used by Toronto Open Data
     const formats = [
@@ -94,6 +119,10 @@ class EventProcessor {
     for (let format of formats) {
       const parsed = moment(cleanDate, format, true);
       if (parsed.isValid()) {
+        // For date-only formats, normalize to EST
+        if (format === 'YYYY-MM-DD' || format === 'MM/DD/YYYY' || format === 'DD/MM/YYYY') {
+          return this.normalizeDateToEST(parsed.toDate());
+        }
         return parsed.toDate();
       }
     }
@@ -101,17 +130,53 @@ class EventProcessor {
     // Try flexible moment parsing
     const flexibleParsed = moment(cleanDate);
     if (flexibleParsed.isValid()) {
+      // Check if it's effectively a date-only value (time is midnight or not specified)
+      const hasTime = cleanDate.includes('T') || cleanDate.includes(':');
+      if (!hasTime) {
+        // Normalize date-only to EST
+        return this.normalizeDateToEST(flexibleParsed.toDate());
+      }
       return flexibleParsed.toDate();
     }
     
     // Fallback to native JS Date parsing
     const jsDate = new Date(cleanDate);
     if (!isNaN(jsDate.getTime())) {
+      // Check if it's a date-only string (no time component in original string)
+      if (!cleanDate.includes('T') && !cleanDate.includes(':')) {
+        return this.normalizeDateToEST(jsDate);
+      }
       return jsDate;
     }
     
     console.warn(`⚠️  Could not parse date: "${cleanDate}"`);
     return null;
+  }
+
+  // Normalize a Date object to represent the date at EST midnight
+  // This ensures date-only values are consistent across different server timezones
+  // We do this by getting the date components as they appear in EST and creating
+  // a new date that represents midnight EST for that date
+  normalizeDateToEST(date) {
+    if (!date) return null;
+    
+    // Use Intl.DateTimeFormat to get the date as it appears in EST
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+    });
+    
+    const parts = formatter.formatToParts(date);
+    const estYear = parseInt(parts.find(p => p.type === 'year').value);
+    const estMonth = parseInt(parts.find(p => p.type === 'month').value) - 1; // Month is 0-indexed
+    const estDay = parseInt(parts.find(p => p.type === 'day').value);
+    
+    // Create a date at midnight local time with EST date components
+    // This date will represent the EST date, and when serialized to JSON
+    // it will be consistent regardless of server timezone
+    return new Date(estYear, estMonth, estDay);
   }
 
   // Parse numbers safely

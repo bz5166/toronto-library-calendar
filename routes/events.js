@@ -159,10 +159,36 @@ router.get('/', async (req, res) => {
     // The frontend calendar will only display events for the visible month
     console.log(`✅ Returning ${filteredEvents.length} filtered events from ${processedEvents.length} total`);
     
+    // Normalize dates to ensure consistency across timezones
+    // Convert Date objects to date-only strings (YYYY-MM-DD) for date-only values
+    const normalizedEvents = filteredEvents.map(event => {
+      const normalized = { ...event };
+      
+      // Convert startDate to date-only string if it's a date-only value
+      if (event.startDate instanceof Date) {
+        // Check if it's effectively a date-only value (time is midnight)
+        const dateStr = event.startDate.toISOString();
+        // If time is 00:00:00.000Z, it's date-only, convert to YYYY-MM-DD
+        if (dateStr.endsWith('T00:00:00.000Z') || dateStr.match(/T00:00:00\.000Z$/)) {
+          normalized.startDate = dateStr.split('T')[0];
+        }
+      }
+      
+      // Same for endDate
+      if (event.endDate instanceof Date) {
+        const dateStr = event.endDate.toISOString();
+        if (dateStr.endsWith('T00:00:00.000Z') || dateStr.match(/T00:00:00\.000Z$/)) {
+          normalized.endDate = dateStr.split('T')[0];
+        }
+      }
+      
+      return normalized;
+    });
+    
     res.json({
       success: true,
-      events: filteredEvents,  // Return ALL filtered events, not just 50
-      total: filteredEvents.length,
+      events: normalizedEvents,  // Return normalized events
+      total: normalizedEvents.length,
       allEvents: processedEvents.length,
       source: 'fresh_api_filtered',
       appliedFilters: { search, library, category, ageGroup }

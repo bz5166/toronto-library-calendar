@@ -2604,7 +2604,23 @@
             eventsData.forEach(event => {
                 if (!event.startDate) return;
                 
-                const eventDate = new Date(event.startDate);
+                // Handle both date strings (YYYY-MM-DD) and Date objects/ISO strings
+                let eventDate;
+                if (typeof event.startDate === 'string') {
+                    // If it's a date-only string (YYYY-MM-DD), treat it as EST date
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(event.startDate)) {
+                        // Date-only string - extract components and create date
+                        // This represents the date in EST, so we use the components directly
+                        const [year, month, day] = event.startDate.split('-').map(Number);
+                        // Create a date object - when we later convert to EST, it will be correct
+                        eventDate = new Date(year, month - 1, day);
+                    } else {
+                        // ISO string with time - parse normally
+                        eventDate = new Date(event.startDate);
+                    }
+                } else {
+                    eventDate = new Date(event.startDate);
+                }
                 
                 // Get EST date components for the event
                 const eventDateEST = new Intl.DateTimeFormat('en-US', {
