@@ -160,26 +160,33 @@ router.get('/', async (req, res) => {
     console.log(`✅ Returning ${filteredEvents.length} filtered events from ${processedEvents.length} total`);
     
     // Normalize dates to ensure consistency across timezones
-    // Convert Date objects to date-only strings (YYYY-MM-DD) for date-only values
+    // Since source data is already in EST, ensure all dates are sent as date-only strings (YYYY-MM-DD)
+    // This prevents timezone conversion issues when dates are serialized to JSON
     const normalizedEvents = filteredEvents.map(event => {
       const normalized = { ...event };
       
-      // Convert startDate to date-only string if it's a date-only value
-      if (event.startDate instanceof Date) {
-        // Check if it's effectively a date-only value (time is midnight)
-        const dateStr = event.startDate.toISOString();
-        // If time is 00:00:00.000Z, it's date-only, convert to YYYY-MM-DD
-        if (dateStr.endsWith('T00:00:00.000Z') || dateStr.match(/T00:00:00\.000Z$/)) {
-          normalized.startDate = dateStr.split('T')[0];
+      // Convert startDate to date-only string (YYYY-MM-DD) to preserve EST date
+      if (event.startDate) {
+        if (event.startDate instanceof Date) {
+          // Extract the date components as they are (source is already in EST)
+          const year = event.startDate.getFullYear();
+          const month = event.startDate.getMonth() + 1; // getMonth() is 0-indexed
+          const day = event.startDate.getDate();
+          // Format as YYYY-MM-DD string to preserve the EST date
+          normalized.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
+        // If it's already a string, keep it as-is (it's already in EST format)
       }
       
       // Same for endDate
-      if (event.endDate instanceof Date) {
-        const dateStr = event.endDate.toISOString();
-        if (dateStr.endsWith('T00:00:00.000Z') || dateStr.match(/T00:00:00\.000Z$/)) {
-          normalized.endDate = dateStr.split('T')[0];
+      if (event.endDate) {
+        if (event.endDate instanceof Date) {
+          const year = event.endDate.getFullYear();
+          const month = event.endDate.getMonth() + 1;
+          const day = event.endDate.getDate();
+          normalized.endDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
+        // If it's already a string, keep it as-is
       }
       
       return normalized;
