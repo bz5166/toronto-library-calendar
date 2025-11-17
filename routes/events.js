@@ -19,6 +19,77 @@ if (TorontoLibraryAPI && EventProcessor) {
   processor = new EventProcessor();
 }
 
+const CACHE_TTL = parseInt(process.env.EVENT_CACHE_TTL || '300000', 10); // default 5 minutes
+let eventsCache = null;
+let cachePromise = null;
+
+async function fetchAndCacheEvents(forceRefresh = false) {
+  if (!libraryAPI || !processor) {
+    throw new Error('Services not configured');
+  }
+
+  const cacheIsFresh = !forceRefresh && eventsCache && (Date.now() - eventsCache.timestamp < CACHE_TTL);
+  if (cacheIsFresh) {
+    return eventsCache;
+  }
+
+  if (cachePromise && !forceRefresh) {
+    return cachePromise;
+  }
+
+  cachePromise = (async () => {
+    console.log(forceRefresh ? '🔄 Forcing event cache refresh...' : '🗂️ Building event cache...');
+    const { events, package: packageInfo } = await libraryAPI.getAllLibraryEvents();
+    const processedEvents = events.map(event => processor.normalizeEvent(event));
+    eventsCache = {
+      raw: events,
+      processed: processedEvents,
+      timestamp: Date.now(),
+      packageInfo
+    };
+    cachePromise = null;
+    console.log(`✅ Cached ${processedEvents.length} events at ${new Date(eventsCache.timestamp).toISOString()}`);
+    return eventsCache;
+  })().catch(error => {
+    cachePromise = null;
+    throw error;
+  });
+
+  return cachePromise;
+}
+
+function bustEventCache() {
+  eventsCache = null;
+  cachePromise = null;
+}
+
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || '';
+let adminKeyMissingWarned = false;
+
+function requireAdminKey(req, res, next) {
+  if (!ADMIN_API_KEY) {
+    if (!adminKeyMissingWarned) {
+      console.warn('⚠️  ADMIN_API_KEY not configured. Refresh route disabled until it is set.');
+      adminKeyMissingWarned = true;
+    }
+    return res.status(503).json({
+      success: false,
+      error: 'Admin API key not configured'
+    });
+  }
+
+  const providedKey = req.get('x-api-key') || req.query.apiKey || req.query.api_key;
+
+  if (!providedKey || providedKey !== ADMIN_API_KEY) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized'
+    });
+  }
+
+  return next();
+}
+
 // GET /filters - Extract from correct field names
 router.get('/filters', async (req, res) => {
   try {
@@ -29,8 +100,9 @@ router.get('/filters', async (req, res) => {
       });
     }
 
-    const { events } = await libraryAPI.getAllLibraryEvents();
-    const processedEvents = events.map(event => processor.normalizeEvent(event));
+    const cache = await fetchAndCacheEvents();
+    const events = cache.raw;
+    const processedEvents = cache.processed;
     
     // Extract libraries
     const libraries = [...new Set(processedEvents.map(e => e.library).filter(Boolean))].sort();
@@ -53,6 +125,7 @@ router.get('/filters', async (req, res) => {
 
     console.log(`✅ Real data: ${libraries.length} libraries, ${categories.length} categories, ${ageGroups.length} age groups`);
 
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=300');
     res.json({
       success: true,
       filters: {
@@ -107,12 +180,13 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Get all events from Toronto API
-    console.log('🔄 Fetching all events for filtering...');
-    const { events } = await libraryAPI.getAllLibraryEvents();
+    // Get all events from cache or API
+    const cache = await fetchAndCacheEvents();
+    const cacheAgeSeconds = Math.round((Date.now() - cache.timestamp) / 1000);
+    console.log(`🗂️ Using cached events dataset (${cache.processed.length} items, age ${cacheAgeSeconds}s)`);
     
     // Process all events
-    let processedEvents = events.map(event => processor.normalizeEvent(event));
+    let processedEvents = cache.processed;
     
     // Apply text and dropdown filters first
     let filteredEvents = processedEvents.filter(event => {
@@ -192,6 +266,7 @@ router.get('/', async (req, res) => {
       return normalized;
     });
     
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     res.json({
       success: true,
       events: normalizedEvents,  // Return normalized events
@@ -212,7 +287,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /refresh
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', requireAdminKey, async (req, res) => {
   try {
     if (!libraryAPI || !processor) {
       return res.json({
@@ -222,17 +297,23 @@ router.post('/refresh', async (req, res) => {
     }
 
     console.log('🔄 Starting refresh...');
-    const { events, package: packageInfo } = await libraryAPI.getAllLibraryEvents();
+    const cache = await fetchAndCacheEvents(true);
     
-    let result = { total: events.length, saved: 0, updated: 0, errors: 0 };
+    let result = { 
+      total: cache.processed.length, 
+      saved: 0, 
+      updated: 0, 
+      errors: 0,
+      cachedAt: new Date(cache.timestamp).toISOString()
+    };
     
     res.json({
       success: true,
       message: 'Library events refreshed successfully!',
       stats: result,
       packageInfo: {
-        title: packageInfo.title,
-        lastUpdated: packageInfo.metadata_modified
+        title: cache.packageInfo?.title,
+        lastUpdated: cache.packageInfo?.metadata_modified
       }
     });
 

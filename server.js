@@ -4,11 +4,52 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
 
 console.log('🚀 Starting server...');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BODY_LIMIT = process.env.JSON_BODY_LIMIT || '1mb';
+const isProduction = process.env.NODE_ENV === 'production';
+const defaultOrigins = [
+  'https://tplevents.ca',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultOrigins.join(','))
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true); // Non-browser or same-origin
+    }
+    if (!allowedOrigins.length) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`🚫 Blocked CORS origin: ${origin}`);
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  optionsSuccessStatus: 204
+};
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.GLOBAL_RATE_LIMIT || '200', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Add error handling for missing files
 let eventRoutes;
@@ -23,9 +64,23 @@ try {
 }
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
+if (process.env.TRUST_PROXY === 'true' || isProduction) {
+  app.set('trust proxy', 1);
+}
+
+app.use(helmet({
+  contentSecurityPolicy: false, // Frontend relies on inline scripts/styles
+}));
+app.use(compression());
+app.use(globalLimiter);
+app.use(hpp());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+app.use(express.static('public', {
+  maxAge: isProduction ? '1h' : 0,
+  etag: true
+}));
 
 // Set view engine only if views directory exists
 try {

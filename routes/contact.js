@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 
 // Simple in-memory rate limiting (for production, consider using express-rate-limit)
@@ -116,12 +117,17 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
       ip: req.ip || req.connection.remoteAddress || 'unknown'
     };
     
-    console.log('📧 Contact form submission received:');
-    console.log('   Name:', contactData.name);
-    console.log('   Email:', contactData.email);
-    console.log('   Subject:', contactData.subject);
-    console.log('   Message:', contactData.message);
-    console.log('   Timestamp:', contactData.timestamp);
+    contactData.ipHash = contactData.ip && contactData.ip !== 'unknown'
+      ? crypto.createHash('sha256').update(contactData.ip).digest('hex')
+      : 'unknown';
+    const ipDisplay = contactData.ipHash === 'unknown' ? 'unknown' : `hash:${contactData.ipHash}`;
+
+    console.log('📧 Contact form submission metadata:', {
+      subject: contactData.subject,
+      messageLength: sanitizedMessage.length,
+      ipHash: contactData.ipHash,
+      timestamp: contactData.timestamp
+    });
     
     // Check if SMTP is configured
     const smtpHost = process.env.SMTP_HOST;
@@ -171,7 +177,7 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
         
         ---
         Submitted at: ${contactData.timestamp}
-        IP: ${contactData.ip}
+        IP (hashed): ${ipDisplay}
       `,
         html: `
         <h2>New Contact Form Submission</h2>
@@ -181,7 +187,7 @@ router.post('/', rateLimitMiddleware, async (req, res) => {
         <p><strong>Message:</strong></p>
         <p>${sanitizedMessage.replace(/\n/g, '<br>')}</p>
         <hr>
-        <p><small>Submitted at: ${contactData.timestamp}<br>IP: ${contactData.ip}</small></p>
+        <p><small>Submitted at: ${contactData.timestamp}<br>IP (hashed): ${ipDisplay}</small></p>
       `
       });
       
