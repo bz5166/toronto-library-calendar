@@ -54,8 +54,8 @@ class EventProcessor {
       email: null,
       website: this.cleanText(rawEvent.pagelink),
       
-      // Metadata
-      lastUpdated: new Date(),
+      // Metadata - use lastupdated from raw event if available, otherwise use current date
+      lastUpdated: rawEvent.lastupdated || rawEvent.lastUpdated || rawEvent.metadata_modified || new Date(),
       dataSource: 'toronto-library-events',
       rawData: rawEvent
     };

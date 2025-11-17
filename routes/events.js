@@ -516,12 +516,12 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-// GET /new - Get newly created programs based on lastUpdated field
+// GET /new - Get newly updated programs based on lastUpdated field
 router.get('/new', async (req, res) => {
   try {
     const { days = 28 } = req.query; // Default to 28 days, but allow 1, 4, 7, 14, 21, 28
     
-    // Validate days parameter
+    // Validate days parameter - only allow specific day values
     const validDays = [1, 4, 7, 14, 21, 28];
     const daysNum = parseInt(days, 10);
     if (!validDays.includes(daysNum)) {
@@ -532,11 +532,16 @@ router.get('/new', async (req, res) => {
       });
     }
 
-    // Calculate the date threshold
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - daysNum);
+    // Calculate the date threshold - normalize to UTC midnight for accurate day-based comparison
+    const now = new Date();
+    const thresholdDate = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysNum,
+      0, 0, 0, 0
+    ));
 
-    console.log(`📅 Fetching programs created in last ${daysNum} days (since ${thresholdDate.toISOString()})`);
+    console.log(`📅 Fetching programs updated in last ${daysNum} days (since ${thresholdDate.toISOString()})`);
 
     let events = [];
     let source = 'unknown';
@@ -554,16 +559,121 @@ router.get('/new', async (req, res) => {
           console.log(`📋 Sample event fields:`, Object.keys(sampleEvent));
           console.log(`📋 Sample lastUpdated value:`, sampleEvent.lastUpdated);
           console.log(`📋 Sample lastUpdated type:`, typeof sampleEvent.lastUpdated);
+          console.log(`📋 Sample rawData exists:`, !!sampleEvent.rawData);
+          if (sampleEvent.rawData) {
+            console.log(`📋 Sample rawData keys:`, Object.keys(sampleEvent.rawData));
+            console.log(`📋 Sample rawData.lastupdated:`, sampleEvent.rawData.lastupdated);
+            console.log(`📋 Sample rawData.lastUpdated:`, sampleEvent.rawData.lastUpdated);
+          }
         }
 
         // Query database for events updated in the last N days
-        events = await LibraryEvent.find({
-          lastUpdated: { $gte: thresholdDate }
-        })
-        .sort({ lastUpdated: -1 }) // Sort by most recently updated first
+        // Fetch all events first, then filter by rawData.lastupdated (from raw table)
+        // This ensures we use the correct field from the raw event data
+        const allEvents = await LibraryEvent.find({})
         .lean(); // Use lean() for better performance
+        
+        console.log(`📊 Fetched ${allEvents.length} total events from database`);
+        
+        // Filter events using rawData.lastupdated (prioritize raw table data)
+        let filteredCount = 0;
+        let noLastUpdatedCount = 0;
+        let invalidDateCount = 0;
+        const sampleFiltered = [];
+        const sampleExcluded = [];
+        
+        events = allEvents.filter(event => {
+          let lastUpdatedValue = null;
+          // Prioritize rawData.lastupdated from the raw table
+          if (event.rawData && (event.rawData.lastupdated || event.rawData.lastUpdated)) {
+            lastUpdatedValue = event.rawData.lastupdated || event.rawData.lastUpdated;
+          } else {
+            lastUpdatedValue = event.lastupdated || event.lastUpdated;
+          }
+          
+          if (!lastUpdatedValue) {
+            noLastUpdatedCount++;
+            return false;
+          }
+          
+          let lastUpdated = null;
+          try {
+            if (lastUpdatedValue instanceof Date) {
+              lastUpdated = new Date(lastUpdatedValue);
+            } else if (typeof lastUpdatedValue === 'string') {
+              // Parse string date - handle various formats
+              lastUpdated = new Date(lastUpdatedValue);
+              // Check if date is valid
+              if (isNaN(lastUpdated.getTime())) {
+                invalidDateCount++;
+                if (invalidDateCount <= 3) {
+                  console.warn(`⚠️ Invalid date format: ${lastUpdatedValue} for event ${event.eventId || event.title}`);
+                }
+                return false;
+              }
+            } else {
+              lastUpdated = new Date(lastUpdatedValue);
+            }
+            
+            // Normalize to UTC midnight for accurate day-based comparison
+            const lastUpdatedUTC = new Date(Date.UTC(
+              lastUpdated.getUTCFullYear(),
+              lastUpdated.getUTCMonth(),
+              lastUpdated.getUTCDate(),
+              0, 0, 0, 0
+            ));
+            
+            const isWithinRange = lastUpdatedUTC >= thresholdDate;
+            
+            if (isWithinRange) {
+              filteredCount++;
+              if (sampleFiltered.length < 3) {
+                sampleFiltered.push({
+                  title: event.title,
+                  lastUpdated: lastUpdatedUTC.toISOString(),
+                  source: event.rawData?.lastupdated ? 'rawData.lastupdated' : 'event.lastUpdated'
+                });
+              }
+            } else {
+              if (sampleExcluded.length < 3) {
+                sampleExcluded.push({
+                  title: event.title,
+                  lastUpdated: lastUpdatedUTC.toISOString(),
+                  threshold: thresholdDate.toISOString()
+                });
+              }
+            }
+            
+            return isWithinRange;
+          } catch (error) {
+            console.error(`❌ Error parsing date for event ${event.eventId || event.title}:`, error, lastUpdatedValue);
+            return false;
+          }
+        });
+        
+        console.log(`📊 Filtering results:`);
+        console.log(`   - Total events: ${allEvents.length}`);
+        console.log(`   - Events within range: ${filteredCount}`);
+        console.log(`   - Events without lastUpdated: ${noLastUpdatedCount}`);
+        console.log(`   - Events with invalid dates: ${invalidDateCount}`);
+        console.log(`   - Threshold date: ${thresholdDate.toISOString()}`);
+        if (sampleFiltered.length > 0) {
+          console.log(`   - Sample included events:`, sampleFiltered);
+        }
+        if (sampleExcluded.length > 0) {
+          console.log(`   - Sample excluded events:`, sampleExcluded);
+        }
+        
+        // Sort by lastupdated from rawData
+        events.sort((a, b) => {
+          const aLastUpdated = (a.rawData && (a.rawData.lastupdated || a.rawData.lastUpdated)) || a.lastupdated || a.lastUpdated;
+          const bLastUpdated = (b.rawData && (b.rawData.lastupdated || b.rawData.lastUpdated)) || b.lastupdated || b.lastUpdated;
+          const aDate = aLastUpdated ? (aLastUpdated instanceof Date ? aLastUpdated : new Date(aLastUpdated)) : new Date(0);
+          const bDate = bLastUpdated ? (bLastUpdated instanceof Date ? bLastUpdated : new Date(bLastUpdated)) : new Date(0);
+          return bDate - aDate; // Most recent first
+        });
 
-        console.log(`✅ Found ${events.length} programs in database created in last ${daysNum} days`);
+        console.log(`✅ Found ${events.length} programs in database updated in last ${daysNum} days`);
         source = 'database';
       } catch (dbError) {
         console.error('❌ Database query error:', dbError);
@@ -578,16 +688,49 @@ router.get('/new', async (req, res) => {
         const { events: apiEvents } = await libraryAPI.getAllLibraryEvents();
         const processedEvents = apiEvents.map(event => processor.normalizeEvent(event));
         
-        // Filter events by lastUpdated (which is set to current date during normalization)
-        // Since normalization sets lastUpdated to now(), we'll use a different approach:
-        // Use the startDate to determine if it's a "new" event (within the last N days)
+        // Filter events by lastUpdated - prioritize rawData.lastupdated from raw table
+        // The eventProcessor now uses rawEvent.lastupdated if available
         const now = new Date();
+        console.log(`📊 Processing ${processedEvents.length} events from API, filtering by threshold: ${thresholdDate.toISOString()}`);
         events = processedEvents.filter(event => {
-          if (event.lastUpdated) {
-            const lastUpdated = event.lastUpdated instanceof Date 
-              ? event.lastUpdated 
-              : new Date(event.lastUpdated);
-            return lastUpdated >= thresholdDate;
+          // Prioritize rawData.lastupdated from the raw table
+          let lastUpdatedValue = null;
+          if (event.rawData && (event.rawData.lastupdated || event.rawData.lastUpdated)) {
+            lastUpdatedValue = event.rawData.lastupdated || event.rawData.lastUpdated;
+          } else {
+            lastUpdatedValue = event.lastupdated || event.lastUpdated;
+          }
+          
+          if (lastUpdatedValue) {
+            let lastUpdated = null;
+            try {
+              if (lastUpdatedValue instanceof Date) {
+                lastUpdated = new Date(lastUpdatedValue);
+              } else if (typeof lastUpdatedValue === 'string') {
+                // Parse string date - handle various formats
+                lastUpdated = new Date(lastUpdatedValue);
+                // Check if date is valid
+                if (isNaN(lastUpdated.getTime())) {
+                  console.warn(`⚠️ Invalid date format: ${lastUpdatedValue} for event ${event.eventId}`);
+                  return false;
+                }
+              } else {
+                lastUpdated = new Date(lastUpdatedValue);
+              }
+              
+              // Normalize to UTC midnight for accurate day-based comparison
+              const lastUpdatedUTC = new Date(Date.UTC(
+                lastUpdated.getUTCFullYear(),
+                lastUpdated.getUTCMonth(),
+                lastUpdated.getUTCDate(),
+                0, 0, 0, 0
+              ));
+              
+              return lastUpdatedUTC >= thresholdDate;
+            } catch (error) {
+              console.error(`❌ Error parsing date for event ${event.eventId}:`, error, lastUpdatedValue);
+              return false;
+            }
           }
           // Fallback: if no lastUpdated, check if startDate is in the future or recent
           if (event.startDate) {
@@ -600,15 +743,24 @@ router.get('/new', async (req, res) => {
           }
           return false;
         }).sort((a, b) => {
-          // Sort by lastUpdated if available, otherwise by startDate
-          const aDate = a.lastUpdated ? (a.lastUpdated instanceof Date ? a.lastUpdated : new Date(a.lastUpdated)) : 
+          // Sort by lastUpdated - prioritize rawData.lastupdated
+          const aLastUpdated = (a.rawData && (a.rawData.lastupdated || a.rawData.lastUpdated)) || a.lastupdated || a.lastUpdated;
+          const bLastUpdated = (b.rawData && (b.rawData.lastupdated || b.rawData.lastUpdated)) || b.lastupdated || b.lastUpdated;
+          const aDate = aLastUpdated ? (aLastUpdated instanceof Date ? aLastUpdated : new Date(aLastUpdated)) : 
                         (a.startDate ? (a.startDate instanceof Date ? a.startDate : new Date(a.startDate)) : new Date(0));
-          const bDate = b.lastUpdated ? (b.lastUpdated instanceof Date ? b.lastUpdated : new Date(b.lastUpdated)) : 
+          const bDate = bLastUpdated ? (bLastUpdated instanceof Date ? bLastUpdated : new Date(bLastUpdated)) : 
                         (b.startDate ? (b.startDate instanceof Date ? b.startDate : new Date(b.startDate)) : new Date(0));
           return bDate - aDate; // Most recent first
         });
 
         console.log(`✅ Found ${events.length} programs from API (filtered by date)`);
+        console.log(`📊 API filtering: ${processedEvents.length} total events, ${events.length} passed filter for last ${daysNum} days`);
+        if (events.length > 0 && events.length < 10) {
+          console.log(`📊 Sample filtered events:`, events.slice(0, 3).map(e => ({
+            title: e.title,
+            lastUpdated: e.rawData?.lastupdated || e.lastUpdated
+          })));
+        }
         source = 'api';
       } catch (apiError) {
         console.error('❌ API fetch error:', apiError);
@@ -618,6 +770,10 @@ router.get('/new', async (req, res) => {
     // Normalize dates for consistency
     const normalizedEvents = events.map(event => {
       const normalized = { ...event };
+      // Ensure rawData is preserved for frontend filtering
+      if (event.rawData) {
+        normalized.rawData = event.rawData;
+      }
       
       // Convert dates to strings if they're Date objects
       if (event.startDate) {
@@ -638,20 +794,37 @@ router.get('/new', async (req, res) => {
         }
       }
 
-      // Format lastUpdated for display
-      if (event.lastUpdated) {
-        if (event.lastUpdated instanceof Date) {
-          normalized.lastUpdated = event.lastUpdated.toISOString();
-        } else if (typeof event.lastUpdated === 'string') {
+      // Format lastUpdated for display - prioritize lastupdated from rawData (original raw table)
+      // Check rawData.lastupdated first, then fall back to event.lastupdated or event.lastUpdated
+      let lastUpdatedValue = null;
+      if (event.rawData && (event.rawData.lastupdated || event.rawData.lastUpdated)) {
+        lastUpdatedValue = event.rawData.lastupdated || event.rawData.lastUpdated;
+      } else {
+        lastUpdatedValue = event.lastupdated || event.lastUpdated;
+      }
+      
+      if (lastUpdatedValue) {
+        if (lastUpdatedValue instanceof Date) {
+          normalized.lastUpdated = lastUpdatedValue.toISOString();
+          normalized.lastupdated = lastUpdatedValue.toISOString(); // Also include lowercase for frontend
+        } else if (typeof lastUpdatedValue === 'string') {
           // Already a string, keep as is
-          normalized.lastUpdated = event.lastUpdated;
+          normalized.lastUpdated = lastUpdatedValue;
+          normalized.lastupdated = lastUpdatedValue; // Also include lowercase for frontend
         }
       }
       
       return normalized;
     });
 
-    console.log(`📊 Returning ${normalizedEvents.length} events from ${source}`);
+    console.log(`📊 Returning ${normalizedEvents.length} events from ${source} for last ${daysNum} days`);
+    console.log(`📊 Threshold was: ${thresholdDate.toISOString()}`);
+    if (normalizedEvents.length > 0) {
+      const firstEvent = normalizedEvents[0];
+      const lastEvent = normalizedEvents[normalizedEvents.length - 1];
+      console.log(`📊 First event lastUpdated:`, firstEvent.rawData?.lastupdated || firstEvent.lastupdated || firstEvent.lastUpdated);
+      console.log(`📊 Last event lastUpdated:`, lastEvent.rawData?.lastupdated || lastEvent.lastupdated || lastEvent.lastUpdated);
+    }
 
     res.json({
       success: true,

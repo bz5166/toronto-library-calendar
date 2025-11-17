@@ -409,10 +409,24 @@
             border: 1px solid var(--border-color);
         }
         
+        .view-toggle .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
         .view-toggle .btn-group .btn {
             border-radius: 8px !important;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             font-weight: 500;
+            margin: 0 !important;
+            border: 2px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .view-toggle .btn-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
         }
         
         .view-toggle .btn-primary {
@@ -920,8 +934,12 @@
                 padding: 0.75rem;
             }
             
+            .view-toggle .btn-group {
+                gap: 0.5rem;
+            }
+            
             .view-toggle .btn {
-                padding: 0.5rem 0.75rem;
+                padding: 0.6rem 1rem;
                 font-size: 0.9rem;
             }
             
@@ -2524,12 +2542,24 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log(`✅ Loaded ${data.events.length} new programs`);
+                    console.log(`✅ Loaded ${data.events.length} new programs from API for last ${days} days`);
+                    console.log(`📊 Request was for ${days} days, received ${data.events.length} events`);
+                    if (data.events.length > 0) {
+                        const sample = data.events[0];
+                        console.log(`📊 Sample event structure:`, {
+                            title: sample.title,
+                            hasRawData: !!sample.rawData,
+                            rawDataLastUpdated: sample.rawData?.lastupdated || sample.rawData?.lastUpdated,
+                            eventLastUpdated: sample.lastupdated || sample.lastUpdated,
+                            allKeys: Object.keys(sample).slice(0, 10)
+                        });
+                    }
                     // Store the events globally for filtering
                     newProgramsEvents = data.events;
+                    console.log(`📊 Stored ${newProgramsEvents.length} events in newProgramsEvents`);
                     // Load filter options based on new programs
                     loadFilterOptionsForNewPrograms();
-                    // Apply current filters to the new programs
+                    // Apply current filters to the new programs and display them
                     filterEvents();
                 } else {
                     throw new Error(data.error || 'Failed to load new programs');
@@ -2620,7 +2650,15 @@
                     }
                 }
                 
-                const lastUpdated = event.lastUpdated ? new Date(event.lastUpdated).toLocaleDateString('en-US', { 
+                // Format lastUpdated - use lastupdated column from rawData (original raw table)
+                // Check rawData.lastupdated first, then fall back to event.lastupdated or event.lastUpdated
+                let lastUpdatedValue = null;
+                if (event.rawData && (event.rawData.lastupdated || event.rawData.lastUpdated)) {
+                    lastUpdatedValue = event.rawData.lastupdated || event.rawData.lastUpdated;
+                } else {
+                    lastUpdatedValue = event.lastupdated || event.lastUpdated;
+                }
+                const lastUpdated = lastUpdatedValue ? new Date(lastUpdatedValue).toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric',
@@ -3688,6 +3726,11 @@
                     filterEvents();
                 } else if (e.target.matches('#distanceFilter')) {
                     handleDistanceFilterChange(e.target.value);
+                } else if (e.target.matches('#daysSelector')) {
+                    // Handle days selector change for new programs view
+                    const days = parseInt(e.target.value, 10);
+                    console.log(`📅 Days selector changed to ${days} days`);
+                    loadNewPrograms(days);
                 }
             });
             
@@ -3724,6 +3767,16 @@
                     }
                 });
             });
+            
+            // Days selector for new programs - also attach directly as backup
+            const daysSelector = document.getElementById('daysSelector');
+            if (daysSelector) {
+                daysSelector.addEventListener('change', function() {
+                    const days = parseInt(this.value, 10);
+                    console.log(`📅 Days selector changed to ${days} days (direct listener)`);
+                    loadNewPrograms(days);
+                });
+            }
         }
 
         // New function to handle distance filter changes
