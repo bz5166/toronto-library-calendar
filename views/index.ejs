@@ -525,6 +525,9 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             border: 1px solid var(--border-color);
             margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+            max-width: 100%;
         }
         
         .calendar-grid {
@@ -535,6 +538,8 @@
             border-radius: 8px;
             overflow: hidden;
             background: var(--border-color);
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .calendar-day-header {
@@ -728,16 +733,37 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             position: relative;
+            touch-action: pan-x pan-y;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Leaflet map touch optimizations */
+        .leaflet-container {
+            touch-action: pan-x pan-y;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .leaflet-control {
+            touch-action: manipulation;
+        }
+        
+        .leaflet-control-zoom a {
+            min-width: 44px;
+            min-height: 44px;
+            line-height: 44px;
+            touch-action: manipulation;
         }
         
         .library-popup {
             max-width: 250px;
+            box-sizing: border-box;
         }
         
         .library-popup h3 {
             color: var(--primary-color);
             font-size: 1.1rem;
             margin-bottom: 0.5rem;
+            word-wrap: break-word;
         }
         
         .popup-event {
@@ -747,15 +773,89 @@
             margin-bottom: 0.25rem;
             cursor: pointer;
             transition: background 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 102, 204, 0.1);
         }
         
         .popup-event:hover {
             background: #f8f9fa;
         }
         
+        .popup-event:active {
+            background: #e9ecef;
+        }
+        
+        .popup-event a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            touch-action: manipulation;
+        }
+        
+        .popup-event small {
+            display: block;
+            margin-top: 0.25rem;
+            touch-action: manipulation;
+        }
+        
+        .popup-view-details-btn {
+            background: none !important;
+            border: none !important;
+            color: #0066cc !important;
+            padding: 0.5rem 0 !important;
+            margin-top: 0.25rem !important;
+            font-size: 0.85rem !important;
+            cursor: pointer !important;
+            text-decoration: underline !important;
+            touch-action: manipulation !important;
+            min-height: 32px !important;
+            text-align: left !important;
+            width: 100% !important;
+            -webkit-tap-highlight-color: rgba(0, 102, 204, 0.1) !important;
+        }
+        
+        .popup-view-details-btn:active {
+            color: #004d99 !important;
+            background-color: rgba(0, 102, 204, 0.05) !important;
+        }
+        
         .event-list {
             max-height: 200px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+        
+        /* Leaflet popup mobile adjustments */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+        }
+        
+        .leaflet-popup-content {
+            margin: 13px 19px;
+            line-height: 1.4;
+        }
+        
+        .leaflet-popup-tip {
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+        }
+        
+        /* Popup wrapper for better mobile control */
+        .library-popup-wrapper .leaflet-popup-content-wrapper {
+            max-height: calc(100vh - 100px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .library-popup-wrapper .leaflet-popup-content {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            max-height: calc(100vh - 150px);
+            margin: 0;
+            padding: 13px 19px;
         }
         
         /* New Programs View Styles */
@@ -968,10 +1068,19 @@
                 font-size: 0.85rem;
             }
             
+            .calendar-container {
+                padding: 0.5rem;
+            }
+            
+            .calendar-day-header {
+                padding: 0.45rem 0.2rem;
+                font-size: 0.68rem;
+            }
+            
             .calendar-day {
-                height: 80px;
-                padding: 0.25rem;
-                min-height: 80px;
+                height: auto;
+                min-height: 95px;
+                padding: 0.3rem 0.2rem;
             }
             
             .day-number {
@@ -981,15 +1090,15 @@
             }
             
             .event-tile {
-                font-size: 0.5rem;
-                padding: 0.1rem 0.15rem;
+                font-size: 0.52rem;
+                padding: 0.12rem 0.18rem;
                 margin-bottom: 0.1rem;
-                line-height: 1.2;
+                line-height: 1.25;
             }
             
             .more-events {
-                font-size: 0.45rem;
-                padding: 0.1rem 0.15rem;
+                font-size: 0.48rem;
+                padding: 0.1rem 0.18rem;
             }
             
             .status-bar {
@@ -1046,18 +1155,75 @@
             }
             
             .library-popup {
-                max-width: 280px;
+                max-width: calc(100vw - 40px);
+                width: calc(100vw - 40px);
                 font-size: 0.9rem;
+                padding: 0.5rem;
+            }
+            
+            .library-popup h3 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            .library-popup p {
+                font-size: 0.85rem;
+                margin-bottom: 0.5rem;
             }
             
             .popup-event {
-                padding: 0.5rem 0;
+                padding: 0.75rem;
                 font-size: 0.85rem;
+                min-height: 44px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            
+            .popup-event strong {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .popup-event small {
+                font-size: 0.8rem;
+                margin-top: 0.25rem;
+            }
+            
+            .event-list {
+                max-height: calc(50vh - 150px);
+                min-height: 100px;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                padding-right: 0.25rem;
+            }
+            
+            /* Leaflet popup mobile adjustments */
+            .leaflet-popup-content-wrapper {
+                max-width: calc(100vw - 20px);
+                width: calc(100vw - 20px);
+            }
+            
+            .leaflet-popup-content {
+                margin: 10px 12px;
+                width: auto !important;
+            }
+            
+            .leaflet-popup-close-button {
+                width: 30px;
+                height: 30px;
+                font-size: 24px;
+                line-height: 30px;
+                padding: 0;
+                touch-action: manipulation;
             }
             
             .view-all-programs-btn {
-                padding: 0.5rem;
+                min-height: 44px;
+                padding: 0.75rem;
                 font-size: 0.9rem;
+                touch-action: manipulation;
             }
         }
         
@@ -1067,18 +1233,30 @@
                 padding: 0 1rem;
             }
             
+            .calendar-container {
+                padding: 0.75rem;
+            }
+            
+            .calendar-day-header {
+                padding: 0.6rem 0.3rem;
+                font-size: 0.75rem;
+            }
+            
             .calendar-day {
-                height: 100px;
-                padding: 0.3rem;
+                height: auto;
+                min-height: 105px;
+                padding: 0.35rem 0.3rem;
             }
             
             .event-tile {
                 font-size: 0.6rem;
-                padding: 0.1rem 0.25rem;
+                padding: 0.12rem 0.25rem;
+                line-height: 1.3;
             }
             
             .more-events {
                 font-size: 0.55rem;
+                padding: 0.1rem 0.25rem;
             }
             
             #map {
@@ -1090,31 +1268,67 @@
             }
         }
         
+        /* Tablets in landscape (576px to 768px landscape) */
+        @media (min-width: 576px) and (max-width: 768px) and (orientation: landscape) {
+            .calendar-day {
+                min-height: 90px;
+            }
+            
+            .calendar-day-header {
+                padding: 0.5rem 0.25rem;
+            }
+        }
+        
         /* Standard mobile (up to 768px) */
         @media (max-width: 768px) {
             .calendar-nav {
                 flex-direction: column;
                 gap: 1rem;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .calendar-nav h2 {
+                font-size: 1.1rem;
+            }
+            
+            .calendar-container {
+                padding: 0.5rem;
+                margin-bottom: 1rem;
+                border-radius: 8px;
+            }
+            
+            .calendar-grid {
+                gap: 0.5px;
+                border-radius: 6px;
+            }
+            
+            .calendar-day-header {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.7rem;
+                font-weight: 600;
             }
             
             .calendar-day {
-                height: 90px;
-                padding: 0.2rem;
+                height: auto;
+                min-height: 100px;
+                padding: 0.3rem 0.2rem;
             }
             
             .day-number {
-                font-size: 0.8rem;
+                font-size: 0.75rem;
                 margin-bottom: 0.2rem;
             }
             
             .event-tile {
                 font-size: 0.55rem;
-                padding: 0.05rem 0.2rem;
+                padding: 0.15rem 0.2rem;
+                line-height: 1.3;
             }
             
             .more-events {
                 font-size: 0.5rem;
-                padding: 0.05rem 0.2rem;
+                padding: 0.1rem 0.2rem;
             }
             
             .main-container {
@@ -1167,7 +1381,66 @@
             
             /* Better popup sizing */
             .library-popup {
-                max-width: 90vw;
+                max-width: calc(100vw - 30px);
+                width: calc(100vw - 30px);
+                padding: 0.75rem;
+            }
+            
+            .library-popup h3 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .library-popup p {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .popup-event {
+                padding: 0.7rem;
+                font-size: 0.88rem;
+                min-height: 44px;
+            }
+            
+            .popup-event strong {
+                font-size: 0.95rem;
+            }
+            
+            .popup-event small {
+                font-size: 0.82rem;
+            }
+            
+            .event-list {
+                max-height: calc(50vh - 180px);
+                min-height: 120px;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+            }
+            
+            /* Leaflet popup mobile adjustments */
+            .leaflet-popup-content-wrapper {
+                max-width: calc(100vw - 20px);
+                width: calc(100vw - 20px);
+            }
+            
+            .leaflet-popup-content {
+                margin: 12px 15px;
+                width: auto !important;
+            }
+            
+            .leaflet-popup-close-button {
+                width: 32px;
+                height: 32px;
+                font-size: 22px;
+                line-height: 32px;
+                touch-action: manipulation;
+            }
+            
+            .view-all-programs-btn {
+                min-height: 44px;
+                padding: 0.7rem;
+                font-size: 0.9rem;
+                touch-action: manipulation;
             }
             
             /* Improve notification positioning */
@@ -1185,8 +1458,103 @@
                 height: 250px;
             }
             
+            .calendar-container {
+                padding: 0.5rem;
+            }
+            
+            .calendar-day-header {
+                padding: 0.4rem 0.2rem;
+                font-size: 0.65rem;
+            }
+            
             .calendar-day {
-                height: 70px;
+                min-height: 85px;
+                padding: 0.25rem 0.15rem;
+            }
+            
+            .day-number {
+                font-size: 0.7rem;
+                margin-bottom: 0.15rem;
+            }
+            
+            .event-tile {
+                font-size: 0.5rem;
+                padding: 0.1rem 0.15rem;
+                line-height: 1.2;
+            }
+            
+            .more-events {
+                font-size: 0.45rem;
+                padding: 0.08rem 0.15rem;
+            }
+            
+            /* Landscape popup adjustments */
+            .library-popup {
+                max-width: calc(50vw - 20px);
+                width: calc(50vw - 20px);
+            }
+            
+            .leaflet-popup-content-wrapper {
+                max-width: calc(50vw - 20px);
+                width: calc(50vw - 20px);
+            }
+            
+            .event-list {
+                max-height: calc(40vh - 100px);
+                min-height: 80px;
+            }
+        }
+        
+        /* Small phones in portrait (up to 480px) */
+        @media (max-width: 480px) {
+            .calendar-container {
+                padding: 0.25rem;
+            }
+            
+            .calendar-day-header {
+                padding: 0.4rem 0.15rem;
+                font-size: 0.65rem;
+            }
+            
+            .calendar-day {
+                min-height: 90px;
+                padding: 0.25rem 0.15rem;
+            }
+            
+            .day-number {
+                font-size: 0.7rem;
+            }
+            
+            .event-tile {
+                font-size: 0.5rem;
+                padding: 0.1rem 0.15rem;
+            }
+            
+            .more-events {
+                font-size: 0.45rem;
+                padding: 0.08rem 0.15rem;
+            }
+        }
+        
+        /* Small phones in landscape (up to 480px landscape) */
+        @media (max-width: 480px) and (orientation: landscape) {
+            .calendar-day {
+                min-height: 75px;
+                padding: 0.2rem 0.1rem;
+            }
+            
+            .calendar-day-header {
+                padding: 0.35rem 0.15rem;
+                font-size: 0.6rem;
+            }
+            
+            .day-number {
+                font-size: 0.65rem;
+            }
+            
+            .event-tile {
+                font-size: 0.45rem;
+                padding: 0.08rem 0.12rem;
             }
         }
         
@@ -1978,7 +2346,17 @@
             
             // Update current location popup
             if (currentLocationMarker) {
-                currentLocationMarker.bindPopup(popupContent).openPopup();
+                const isMobile = window.innerWidth <= 768;
+                const popupOptions = {
+                    maxWidth: isMobile ? window.innerWidth - 40 : 300,
+                    className: 'library-popup-wrapper',
+                    autoPan: true,
+                    autoPanPadding: [20, 20],
+                    closeButton: true,
+                    autoClose: false,
+                    closeOnClick: false
+                };
+                currentLocationMarker.bindPopup(popupContent, popupOptions).openPopup();
             }
         }
 
@@ -2778,7 +3156,20 @@
                 
             // Pre-build popup content more efficiently
             const popupContent = buildPopupContent(libraryName, events, locationData);
-            marker.bindPopup(popupContent);
+            
+            // Mobile-friendly popup options
+            const isMobile = window.innerWidth <= 768;
+            const popupOptions = {
+                maxWidth: isMobile ? window.innerWidth - 40 : 300,
+                className: 'library-popup-wrapper',
+                autoPan: true,
+                autoPanPadding: [20, 20],
+                closeButton: true,
+                autoClose: false,
+                closeOnClick: false
+            };
+            
+            marker.bindPopup(popupContent, popupOptions);
             
             // Attach event listener when popup opens
             marker.on('popupopen', function() {
@@ -2821,7 +3212,7 @@
                             ${hasUrl ? '</a>' : ''}
                             <br>
                             <small>${event.startDate ? event.startDate.split('T')[0] : 'Date TBD'}</small>
-                            <br><small onclick="showEventDetails('${event.eventId}')" style="cursor: pointer; color: #0066cc;">View Details</small>
+                            <br><button onclick="showEventDetails('${event.eventId}')" class="popup-view-details-btn" style="background: none; border: none; color: #0066cc; padding: 0.25rem 0; margin-top: 0.25rem; font-size: 0.85rem; cursor: pointer; text-decoration: underline; touch-action: manipulation; min-height: 32px;">View Details</button>
                         </div>
                     `;
             }).join('');
@@ -3506,15 +3897,26 @@
                 zIndexOffset: -100  // Lower than library markers so they're clickable
             });
             
+            const isMobile = window.innerWidth <= 768;
+            const locationPopupOptions = {
+                maxWidth: isMobile ? window.innerWidth - 40 : 300,
+                className: 'library-popup-wrapper',
+                autoPan: true,
+                autoPanPadding: [20, 20],
+                closeButton: true,
+                autoClose: false,
+                closeOnClick: false
+            };
+            
             currentLocationMarker.bindPopup(`
                 <div style="text-align: center;">
                     <strong>📍 Your Location</strong><br>
                     <small>Accuracy: ~${Math.round(accuracy)}m</small><br>
-                    <button onclick="findNearestLibraries(${lat}, ${lng})" class="btn btn-sm btn-primary mt-2">
+                    <button onclick="findNearestLibraries(${lat}, ${lng})" class="btn btn-sm btn-primary mt-2" style="min-height: 44px; touch-action: manipulation;">
                         Find Nearest Libraries
                     </button>
                 </div>
-            `);
+            `, locationPopupOptions);
             
             // Don't auto-open popup to avoid blocking library markers
             // User can click on the location marker if they want to see it
